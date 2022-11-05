@@ -2,20 +2,19 @@
 
 <p align="center">
     <a href="https://github.com/muckmuck96/obsidian-md-to-jira/releases/latest">
-		<img src="https://img.shields.io/github/manifest-json/v/muckmuck96/obsidian-md-to-jiras?color=blue">
+		<img src="https://img.shields.io/github/manifest-json/v/muckmuck96/obsidian-md-to-jira?color=blue">
 	</a>
     <img src="https://img.shields.io/github/release-date/muckmuck96/obsidian-md-to-jira">
 	<a href="https://github.com/muckmuck96/obsidian-md-to-jira/blob/master/LICENSE">
 		<img src="https://img.shields.io/github/license/muckmuck96/obsidian-md-to-jira">
 	</a>
 	<img src="https://img.shields.io/github/downloads/muckmuck96/obsidian-md-to-jira/total">
+	<br>
 	<a href="https://github.com/muckmuck96/obsidian-md-to-jira/issues">
 		<img src="https://img.shields.io/github/issues/muckmuck96/obsidian-md-to-jira">
 	</a>
-	<br>
-	<img src="https://img.shields.io/tokei/lines/github/muckmuck96/obsidian-md-to-jira">
 	<a href="https://www.codefactor.io/repository/github/muckmuck96/obsidian-md-to-jira/stats">
-		<img src="https://img.shields.io/codefactor/grade/github/muckmuck96/obsidian-md-to-jira">
+		<img src="https://img.shields.io/codefactor/grade/github/muckmuck96/obsidian-md-to-jira/master">
 	</a>
 </p>
 
