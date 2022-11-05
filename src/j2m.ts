@@ -18,7 +18,7 @@ export class J2M {
 		input = input.replace(
 			/([*_])(.*)\1/g,
 			function (_, wrapper: string, content: string): string {
-				let to = wrapper === "*" ? "**" : "*";
+				const to = wrapper === "*" ? "**" : "*";
 				return to + content + to;
 			}
 		);
@@ -68,7 +68,7 @@ export class J2M {
 		input = input.replace(
 			/\{quote\}([^]*)\{quote\}/gm,
 			function (_, content: string): string {
-				let lines = content.split(/\r?\n/gm);
+				const lines = content.split(/\r?\n/gm);
 
 				for (let i = 0; i < lines.length; i++) {
 					lines[i] = "> " + lines[i];
@@ -80,7 +80,7 @@ export class J2M {
 
 		// Images with alt= among their parameters
 		input = input.replace(
-			/!([^|\n\s]+)\|([^\n!]*)alt=([^\n!\,]+?)(,([^\n!]*))?!/g,
+			/!([^|\n\s]+)\|([^\n!]*)alt=([^\n!,]+?)(,([^\n!]*))?!/g,
 			"![$3]($1)"
 		);
 		// Images with just other parameters (ignore them)
@@ -89,7 +89,7 @@ export class J2M {
 		input = input.replace(/!([^\n\s!]+)!/g, "![]($1)");
 
 		input = input.replace(/\[([^|]+)\|(.+?)\]/g, "[$1]($2)");
-		input = input.replace(/\[(.+?)\]([^\(]+)/g, "<$1>$2");
+		input = input.replace(/\[(.+?)\]([^(]+)/g, "<$1>$2");
 
 		input = input.replace(/{noformat}/g, "```");
 		input = input.replace(
@@ -98,11 +98,11 @@ export class J2M {
 		);
 
 		// Convert header rows of tables by splitting input on lines
-		let lines = input.split(/\r?\n/gm);
+		const lines = input.split(/\r?\n/gm);
 		for (let i = 0; i < lines.length; i++) {
-			let line_content = lines[i];
+			const line_content = lines[i];
 
-			let seperators = line_content.match(/\|\|/g);
+			const seperators = line_content.match(/\|\|/g);
 			if (seperators != null) {
 				lines[i] = lines[i].replace(/\|\|/g, "|");
 				console.log(seperators);
@@ -137,8 +137,8 @@ export class J2M {
 	 */
 	public static toJ(input: string): string {
 		// remove sections that shouldn't be recursively processed
-		let START = "J2MBLOCKPLACEHOLDER";
-		let replacementsList: object[] = [];
+		const START = "J2MBLOCKPLACEHOLDER";
+		const replacementsList: object[] = [];
 		let counter = 0;
 
 		input = input.replace(
@@ -151,7 +151,7 @@ export class J2M {
 				}
 
 				code += "}" + content + "{code}";
-				let key = START + counter++ + "%%";
+				const key = START + counter++ + "%%";
 				replacementsList.push({ key: key, value: code });
 				return key;
 			}
@@ -160,8 +160,8 @@ export class J2M {
 		input = input.replace(
 			/`([^`]+)`/g,
 			function (_, content: string): string {
-				let code = "{{" + content + "}}";
-				let key = START + counter++ + "%%";
+				const code = "{{" + content + "}}";
+				const key = START + counter++ + "%%";
 				replacementsList.push({ key: key, value: code });
 				return key;
 			}
@@ -186,7 +186,7 @@ export class J2M {
 		input = input.replace(
 			/([*_]+)(.*?)\1/g,
 			function (_, wrapper: string, content: string): string {
-				let to = wrapper.length === 1 ? "_" : "*";
+				const to = wrapper.length === 1 ? "_" : "*";
 				return to + content + to;
 			}
 		);
@@ -215,7 +215,7 @@ export class J2M {
 			}
 		);
 
-		let map: { [key: string]: any } = {
+		const map: { [key: string]: any } = {
 			cite: "??",
 			del: "-",
 			ins: "+",
@@ -230,7 +230,7 @@ export class J2M {
 			),
 			function (_, from: string, content: string): string {
 				//console.log(from);
-				let to: string = map[from];
+				const to: string = map[from];
 				return to + content + to;
 			}
 		);
@@ -252,14 +252,14 @@ export class J2M {
 
 		// restore extracted sections
 		for (let i = 0; i < replacementsList.length; i++) {
-			let sub: { [key: string]: any } = replacementsList[i];
+			const sub: { [key: string]: any } = replacementsList[i];
 			input = input.replace(sub["key"], sub["value"]);
 		}
 
 		// Convert header rows of tables by splitting input on lines
-		let lines = input.split(/\r?\n/gm);
+		const lines = input.split(/\r?\n/gm);
 		for (let i = 0; i < lines.length; i++) {
-			let line_content = lines[i];
+			const line_content = lines[i];
 
 			if (line_content.match(/\|---/g) != null) {
 				lines[i - 1] = lines[i - 1].replace(/\|/g, "||");
