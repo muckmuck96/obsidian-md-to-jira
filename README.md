@@ -5,7 +5,7 @@
 		<img src="https://img.shields.io/github/manifest-json/v/muckmuck96/obsidian-md-to-jiras?color=blue">
 	</a>
     <img src="https://img.shields.io/github/release-date/muckmuck96/obsidian-md-to-jira">
-	<a href="https://github.com/muckmuck96/obsidian-md-to-jira/blob/main/LICENSE">
+	<a href="https://github.com/muckmuck96/obsidian-md-to-jira/blob/master/LICENSE">
 		<img src="https://img.shields.io/github/license/muckmuck96/obsidian-md-to-jira">
 	</a>
 	<img src="https://img.shields.io/github/downloads/muckmuck96/obsidian-md-to-jira/total">
