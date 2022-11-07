@@ -33,7 +33,7 @@ Then create a folder called obsidian-md-to-jira in the .obsidian/plugins folder 
 Then place the main.js & manifest.json from the release there.
 
 ## Usage
-There are two ways to convert your markdown into jira markup.
+There are two ways to convert your markdown into jira markup. In both ways, the note has to be in editor view.
 
 1. Focus the note you want to convert and use the command: `Note to Jira markup (clipboard) command`
 2. Select some markdown you want to convert and use the command: `Selection to Jira markup (clipboard)`
