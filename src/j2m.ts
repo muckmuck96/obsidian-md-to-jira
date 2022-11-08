@@ -243,7 +243,7 @@ export class J2M {
 		input = input.replace(/~~(.*?)~~/g, "-$1-");
 
 		// Images without alt
-		input = input.replace(/!\[\]\(([^)\n\s]+)\)/g, "!$1!");
+		input = input.replace(/!\[\[(.+)\]\]/g, "!$1|thumbnail!");
 		// Images with alt
 		input = input.replace(/!\[([^\]\n]+)\]\(([^)\n\s]+)\)/g, "!$2|alt=$1!");
 
