@@ -45,5 +45,8 @@ The converter is based on [this project](https://github.com/FokkeZB/J2M)
 
 ## Releases
 
+## 0.0.2: Image translation
+- added image translation to !path|thumbnail! to get an image with easy accessability
+
 ## 0.0.1: Initial release
 - The first release of Markdown to Jira
