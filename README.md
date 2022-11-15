@@ -30,7 +30,7 @@ You can find Markdown to Jira in the list of community plugins!
 
 If the plugin is not yet on the community list, the latest release (main.js & manifest.json) can be downloaded.
 Then create a folder called obsidian-md-to-jira in the .obsidian/plugins folder of the Vault to be installed.
-Then place the main.js & manifest.json from the release there.
+Then place the main.js & manifest.json from the release there. Now you should be able to enable the plugin in the plugins tab of obsidian.
 
 ## Usage
 There are two ways to convert your markdown into jira markup. In both ways, the note has to be in editor view.
