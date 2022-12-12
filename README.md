@@ -13,9 +13,7 @@
 	<a href="https://github.com/muckmuck96/obsidian-md-to-jira/issues">
 		<img src="https://img.shields.io/github/issues/muckmuck96/obsidian-md-to-jira">
 	</a>
-	<a href="https://www.codefactor.io/repository/github/muckmuck96/obsidian-md-to-jira/stats">
-		<img src="https://img.shields.io/codefactor/grade/github/muckmuck96/obsidian-md-to-jira/master">
-	</a>
+	<a href="https://www.codefactor.io/repository/github/muckmuck96/obsidian-md-to-jira"><img src="https://www.codefactor.io/repository/github/muckmuck96/obsidian-md-to-jira/badge" alt="CodeFactor" /></a>
 </p>
 
 <div align="center">
