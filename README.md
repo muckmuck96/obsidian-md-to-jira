@@ -45,6 +45,9 @@ The converter is based on [this project](https://github.com/FokkeZB/J2M)
 
 ## Releases
 
+## 0.0.3: Image not transferred notification
+- added notifications to converted selection at all image positions
+
 ## 0.0.2: Image translation
 - added image translation to !path|thumbnail! to get an image with easy accessability
 
