@@ -1,3 +1,5 @@
+import { App } from "obsidian";
+
 export class J2M {
 	/**
 	 * Takes Jira markup and converts it to Markdown.
@@ -135,7 +137,7 @@ export class J2M {
 	 * @param {string} input
 	 * @returns {string}
 	 */
-	public static toJ(input: string): string {
+	public static toJ(input: string, app: App): string {
 		// remove sections that shouldn't be recursively processed
 		const START = "J2MBLOCKPLACEHOLDER";
 		const replacementsList: object[] = [];
@@ -243,12 +245,42 @@ export class J2M {
 		input = input.replace(/~~(.*?)~~/g, "-$1-");
 
 		// Images without alt
-		input = input.replace(/!\[\[(.+)\]\]/g, "!$1|thumbnail!");
+		input = input.replace(/!\[\[(.+)\]\]/g, function (_, filePath: string) {
+			return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
+				{color:#664d03}+*Warning:*+ The following file must be transferred manually via drag & drop: *${filePath}*{color}
+				{panel}
+				
+				!${filePath}|thumbnail!`;
+		});
 		// Images with alt
-		input = input.replace(/!\[([^\]\n]+)\]\(([^)\n\s]+)\)/g, "!$2|alt=$1!");
+		input = input.replace(
+			/!\[([^\]\n]+)\]\(([^)\n\s]+)\)/g,
+			function (_, alt: string, filePath: string) {
+				return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
+				{color:#664d03}+*Warning:*+ The following file must be transferred manually via drag & drop: *${filePath}*{color}
+				{panel}
+				
+				!${filePath}|alt=${alt}!`;
+			}
+		);
 
-		input = input.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "[$1|$2]");
-		input = input.replace(/<([^>]+)>/g, "[$1]");
+		input = input.replace(
+			/\[([^\]]+)\]\(([^)]+)\)/g,
+			function (_, filePath: string, alt: string) {
+				return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
+				{color:#664d03}+*Warning:*+ The following file must be transferred manually via drag & drop: *${filePath}*{color}
+				{panel}
+				
+				[${filePath}|${alt}]`;
+			}
+		);
+		input = input.replace(/<([^>]+)>/g, function (_, filePath: string) {
+			return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
+				{color:#664d03}+*Warning:*+ The following file must be transferred manually via drag & drop: *${filePath}*{color}
+				{panel}
+				
+				[${filePath}]`;
+		});
 
 		// restore extracted sections
 		for (let i = 0; i < replacementsList.length; i++) {
