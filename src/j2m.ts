@@ -137,10 +137,11 @@ export class J2M {
 	 * @param {string} input
 	 * @returns {string}
 	 */
-	public static toJ(input: string, app: App): string {
+	public static toJ(input: string, app: App): string | ClipboardItem[] {
 		// remove sections that shouldn't be recursively processed
 		const START = "J2MBLOCKPLACEHOLDER";
 		const replacementsList: object[] = [];
+		const clipboardCache: ClipboardItem[] = [];
 		let counter = 0;
 
 		input = input.replace(

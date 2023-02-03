@@ -4,15 +4,17 @@ import {
 	Setting,
 	ToggleComponent,
 	Notice,
+	TextComponent,
 } from "obsidian";
 import MTJPlugin from "./main";
+import { FolderSuggest } from "./util/folderSuggest";
 
 export interface MTJPluginSettings {
-	imageEnableUploadToHost: boolean;
+	imageDirectoryPath: string;
 }
 
 export const DEFAULT_SETTINGS: MTJPluginSettings = {
-	imageEnableUploadToHost: false,
+	imageDirectoryPath: "/",
 };
 
 export default class MTJSettingsTab extends PluginSettingTab {
@@ -32,25 +34,18 @@ export default class MTJSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(
-				"Image Translation (This feature is still in development...)"
+				"Image Directory Path"
 			)
-			.setDesc("Should images be uploaded to one of the selected hosts?")
-			.addToggle((toggle: ToggleComponent) => {
-				toggle.setDisabled(true);
-				toggle.onChange(async () => {
-					if (toggle.disabled) {
-						new Notice(
-							`This feature is still in development...`,
-							3000
-						);
-						this.plugin.settings.imageEnableUploadToHost = false;
-						toggle.setValue(false);
-					} else {
-						this.plugin.settings.imageEnableUploadToHost =
-							toggle.getValue();
+			.setDesc("Location of all images, which should be automatically copied")
+			.addSearch((text: TextComponent) => {
+				new FolderSuggest(text.inputEl);
+				text
+					.setPlaceholder("Example: folderA/folderB")
+					.setValue(this.plugin.settings.imageDirectoryPath)
+					.onChange(async () => {
+						this.plugin.settings.imageDirectoryPath = text.getValue();
 						await this.plugin.saveSettings();
-					}
-				});
+					});
 			});
 	}
 }
