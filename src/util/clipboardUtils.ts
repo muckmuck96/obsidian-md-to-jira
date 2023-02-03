@@ -24,7 +24,7 @@ export class ClipboardUtils {
     }
 
     public static parseImage(imgEle: HTMLImageElement, clipboardCache: ClipboardItem[]): ClipboardItem[] {
-        let image = new Image();
+        const image = new Image();
         image.crossOrigin = 'anonymous';
         image.src = imgEle.src;
         image.onload = () => {

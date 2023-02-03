@@ -2,8 +2,6 @@ import {
 	App,
 	PluginSettingTab,
 	Setting,
-	ToggleComponent,
-	Notice,
 	TextComponent,
 } from "obsidian";
 import MTJPlugin from "./main";

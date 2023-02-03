@@ -141,7 +141,7 @@ export class J2M {
 		// remove sections that shouldn't be recursively processed
 		const START = "J2MBLOCKPLACEHOLDER";
 		const replacementsList: object[] = [];
-		const clipboardCache: ClipboardItem[] = [];
+		// const clipboardCache: ClipboardItem[] = [];
 		let counter = 0;
 
 		input = input.replace(
