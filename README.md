@@ -45,6 +45,11 @@ The converter is based on [this project](https://github.com/FokkeZB/J2M)
 
 ## Releases
 
+## 0.1.0: Convert Callouts
+- added callout configurations (look into the plugin settings)
+- callouts are now getting converted too
+- fixed multi-line bullet list bug [#3](https://github.com/muckmuck96/obsidian-md-to-jira/issues/3)
+
 ## 0.0.3: Image not transferred notification
 - added notifications to converted selection at all image positions
 
