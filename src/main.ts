@@ -15,7 +15,7 @@ export default class MTJPlugin extends Plugin {
 			id: "mtj-convert-note-to-jira",
 			name: "Note to Jira markup (clipboard)",
 			editorCallback: async (editor: Editor) => {
-				const markup = J2M.toJ(editor.getDoc().getValue(), this.app);
+				const markup = J2M.toJ(editor.getDoc().getValue(), this.settings);
 				await navigator.clipboard.writeText(markup);
 			},
 		});
@@ -24,7 +24,7 @@ export default class MTJPlugin extends Plugin {
 			id: "mtj-convert-selection-to-jira",
 			name: "Selection to Jira markup (clipboard)",
 			editorCallback: async (editor: Editor) => {
-				const markup = J2M.toJ(editor.getSelection(), this.app);
+				const markup = J2M.toJ(editor.getSelection(), this.settings);
 				await navigator.clipboard.writeText(markup);
 			},
 		});
