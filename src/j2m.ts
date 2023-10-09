@@ -1,4 +1,3 @@
-import { App } from "obsidian";
 import { MTJPluginSettings } from "./settings";
 
 export class J2M {
@@ -138,46 +137,46 @@ export class J2M {
 		let panelContent = '';
 		let panelTitle = '';
 		let panelType = '';
-		
+
 		const convertedLines = lines.map((line) => {
-		  if (line.startsWith('> [!')) {
-			insideCallout = true;
-			const match = line.match(/^>\s?\[!(\w+)\]\s?(.*)$/);
-			if (match) {
-			  panelType = match[1];
-			  panelTitle = match[2];
-			}
-			return '';
-		  } else if (insideCallout && line.startsWith('> ')) {
-			panelContent += line.replace(/^>\s?(.*)$/, '$1') + '\n';
-			return '';
-		  } else {
-			if (insideCallout) {
-			  insideCallout = false;
-			  let panelColor = '';
-	  
-				const calloutConfiguration = settings.calloutConfigurations.find(ccfg => ccfg.identifier == panelType);
-				if (calloutConfiguration) {
-					panelColor = `bgColor=${calloutConfiguration.contentBgColor}|titleBGColor=${calloutConfiguration.titleBgColor}|titleColor=${calloutConfiguration.titleColor}`
-					panelContent = `{color:${calloutConfiguration.contentColor}}${panelContent.trim()}{color}`;
-					if (calloutConfiguration.titleIcon != "none") {
-						panelTitle = `${calloutConfiguration.titleIcon} ${panelTitle}`;
-					}
+			if (line.startsWith('> [!')) {
+				insideCallout = true;
+				const match = line.match(/^>\s?\[!(\w+)\]\s?(.*)$/);
+				if (match) {
+					panelType = match[1];
+					panelTitle = match[2];
 				}
-	  
-			  const panel = `{panel:${panelColor}|title=${panelTitle}}\n${panelContent}\n{panel}`;
-			  panelContent = '';
-			  panelTitle = '';
-			  panelType = '';
-			  return panel + '\n' + line;
+				return '';
+			} else if (insideCallout && line.startsWith('> ')) {
+				panelContent += line.replace(/^>\s?(.*)$/, '$1') + '\n';
+				return '';
 			} else {
-			  return line;
+				if (insideCallout) {
+					insideCallout = false;
+					let panelColor = '';
+
+					const calloutConfiguration = settings.calloutConfigurations.find(ccfg => ccfg.identifier == panelType);
+					if (calloutConfiguration) {
+						panelColor = `bgColor=${calloutConfiguration.contentBgColor}|titleBGColor=${calloutConfiguration.titleBgColor}|titleColor=${calloutConfiguration.titleColor}`
+						panelContent = `{color:${calloutConfiguration.contentColor}}${panelContent.trim()}{color}`;
+						if (calloutConfiguration.titleIcon != "none") {
+							panelTitle = `${calloutConfiguration.titleIcon} ${panelTitle}`;
+						}
+					}
+
+					const panel = `{panel:${panelColor}|title=${panelTitle}}\n${panelContent}\n{panel}`;
+					panelContent = '';
+					panelTitle = '';
+					panelType = '';
+					return panel + '\n' + line;
+				} else {
+					return line;
+				}
 			}
-		  }
 		});
-	  
+
 		return convertedLines.join('\n');
-	  }
+	}
 
 	/**
 	 * Takes Markdown and converts it to Jira formatted text
