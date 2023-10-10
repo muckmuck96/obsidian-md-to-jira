@@ -207,8 +207,6 @@ export class J2M {
 			}
 		);
 
-		input = this.convertCallouts(input, settings);
-
 		input = input.replace(
 			/`([^`]+)`/g,
 			function (_, content: string): string {
@@ -347,6 +345,10 @@ export class J2M {
 				
 				[${filePath}]`;
 		});
+
+		
+
+		input = this.convertCallouts(input, settings);
 
 		// restore extracted sections
 		for (let i = 0; i < replacementsList.length; i++) {
