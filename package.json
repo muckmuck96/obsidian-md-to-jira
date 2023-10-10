@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-md-to-jira",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "This is a markdown to jira markup and backwards converter plugin for Obsidian (https://obsidian.md)",
 	"main": "src/main.js",
 	"scripts": {
