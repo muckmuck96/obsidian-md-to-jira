@@ -327,17 +327,7 @@ export class J2M {
 				!${filePath}|alt=${alt}!`;
 			}
 		);
-
-		input = input.replace(
-			/\[([^\]]+)\]\(([^)]+)\)/g,
-			function (_, filePath: string, alt: string) {
-				return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
-				{color:#664d03}+*Warning:*+ The following file must be transferred manually via drag & drop: *${filePath}*{color}
-				{panel}
-				
-				[${filePath}|${alt}]`;
-			}
-		);
+		
 		input = input.replace(/<([^>]+)>/g, function (_, filePath: string) {
 			return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
 				{color:#664d03}+*Warning:*+ The following file must be transferred manually via drag & drop: *${filePath}*{color}
