@@ -327,6 +327,13 @@ export class J2M {
 				!${filePath}|alt=${alt}!`;
 			}
 		);
+
+		input = input.replace(
+			/\[([^\]]+)\]\(([^)]+)\)/g,
+			function (_, filePath: string, alt: string) {
+				return `[${alt}|${filePath}]`;
+			}
+		);
 		
 		input = input.replace(/<([^>]+)>/g, function (_, filePath: string) {
 			return `{panel:borderColor=#ffecb5|bgColor=#fff3cd}
