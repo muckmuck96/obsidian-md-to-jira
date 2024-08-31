@@ -12,6 +12,14 @@ export class Translator {
         this.plugin = plugin;
     }
 
+    preserveLineBreaks(markdown: string) {
+        return markdown.replace(/\n/g, '<LINEBREAK>');
+    }
+      
+    postProcessOutput(renered: string) {
+        return renered.replace(/\<LINEBREAK\>/g, '\n');
+    }
+
     convertMarkdownToJira(markdown: string): string {
         const frontmatter = extractFrontmatter(markdown);
         const contentWithoutFrontmatter = markdown.replace(/^---\n[\s\S]*?\n---/, '');
@@ -21,7 +29,9 @@ export class Translator {
             .use(wikiLinks)
             .use(callouts, this.plugin.settings.calloutConfigurations);
 
-        const renderedContent = md.render(contentWithoutFrontmatter);
+        const preprocessedContent = this.preserveLineBreaks(contentWithoutFrontmatter);
+
+        let renderedContent = md.render(preprocessedContent);
     
         let frontmatterOutput = '';
         if (frontmatter && this.plugin.settings.renderMetadata) {
@@ -31,6 +41,8 @@ export class Translator {
             }
             frontmatterOutput += '\n';
         }
+
+        renderedContent = this.postProcessOutput(renderedContent);
     
         return frontmatterOutput + renderedContent;
     }
