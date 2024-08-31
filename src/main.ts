@@ -19,7 +19,9 @@ export default class MTJPlugin extends Plugin {
 		const storedVersion = this.settings.version;
 
 		if (currentVersion != storedVersion) {
-			new UpdateModal(this.app, currentVersion).open();
+			if(currentVersion == "0.2.0") {
+				new UpdateModal(this.app, currentVersion).open();
+			}
 			this.settings.version = currentVersion;
 			await this.saveSettings();
 		}
