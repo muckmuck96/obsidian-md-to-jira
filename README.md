@@ -45,6 +45,9 @@ The converter is based on [this project](https://github.com/FokkeZB/J2M)
 
 ## Releases
 
+## 0.2.1: Improved line break handling
+- fixed reported issue [#6](https://github.com/muckmuck96/obsidian-md-to-jira/issues/6) in new converter
+
 ## 0.2.0: New converter coming
 - fixed reported issue [#5](https://github.com/muckmuck96/obsidian-md-to-jira/issues/5) in legacy converter
 - added new converter (beta)
