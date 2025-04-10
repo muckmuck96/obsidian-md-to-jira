@@ -24,7 +24,9 @@
 ---
 
 ## Install
-You can find Markdown to Jira in the list of community plugins!
+You can find **Markdown to Jira** in the list of community plugins! 
+
+To use the plugin, be sure to enable it from the 'Community Plugins' section under 'Installed Plugins'.
 
 If the plugin is not yet on the community list:
 - download the latest release files **main.js** & **manifest.json** [here](https://github.com/muckmuck96/obsidian-md-to-jira/releases/latest)
