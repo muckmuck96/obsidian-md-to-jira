@@ -7,6 +7,7 @@ import {
 	ButtonComponent,
 	DropdownComponent,
 	ColorComponent,
+	ExtraButtonComponent,
 } from "obsidian";
 import MTJPlugin from "./main";
 import { calloutTypes } from "./utils/calloutTypes";
@@ -38,9 +39,14 @@ export interface MTJPluginSettings {
 	temp: {
 		createCalloutConfiguration: string;
 	};
+	showCalloutConfiguration: boolean;
 	calloutConfigurations: MTJCallout[];
 	imageUpload: MTJImageUpload;
 	version: string;
+	taskListVisualization: {
+		enabled: boolean;
+		mapping: Record<string, string>;
+	};
 }
 
 export const DEFAULT_SETTINGS: MTJPluginSettings = {
@@ -50,6 +56,7 @@ export const DEFAULT_SETTINGS: MTJPluginSettings = {
 	temp: {
 		createCalloutConfiguration: "",
 	},
+	showCalloutConfiguration: true,
 	calloutConfigurations: [],
 	imageUpload: {
 		enabled: false,
@@ -58,7 +65,11 @@ export const DEFAULT_SETTINGS: MTJPluginSettings = {
 		username: "",
 		password: "",
 	},
-	version: '0.0.0'
+	version: '0.0.0',
+	taskListVisualization: {
+		enabled: false,
+		mapping: {},
+	},
 };
 
 export default class MTJSettingsTab extends PluginSettingTab {
@@ -93,68 +104,141 @@ export default class MTJSettingsTab extends PluginSettingTab {
 					})
 		);
 
-		new Setting(containerEl)
-			.setName("Render metadata")
-			.setDesc("Transforms the metadata at the top of an Obsidian note, enclosed by ---, into a Jira-compatible format, resulting in a list of key-value pairs labeled as 'Metadata'. Only works with the new converter!")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.renderMetadata)
-					.setDisabled(this.plugin.settings.useLegacyConverter)
-					.onChange(async (value) => {
-						this.plugin.settings.renderMetadata = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-		);
+		if (!this.plugin.settings.useLegacyConverter) {
+
+			new Setting(containerEl)
+				.setName("Render metadata")
+				.setDesc("Transforms the metadata at the top of an Obsidian note, enclosed by ---, into a Jira-compatible format, resulting in a list of key-value pairs labeled as 'Metadata'. Only works with the new converter!")
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.renderMetadata)
+						.setDisabled(this.plugin.settings.useLegacyConverter)
+						.onChange(async (value) => {
+							this.plugin.settings.renderMetadata = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
 		
-		containerEl.createEl("h2", { text: "Images" });
-
-		new Setting(containerEl)
-			.setName("Image Translation (still  in development")
-			.setDesc("Should images be uploaded to one of the given hosts?")
-			.addToggle((toggle: ToggleComponent) => {
-				toggle.setDisabled(true);
-				toggle.setValue(this.plugin.settings.imageUpload.enabled);
-				/*toggle.onChange(async () => {
-					if (toggle.disabled) {
-						this.plugin.settings.imageUpload.enabled = false;
-						toggle.setValue(false);
-					} else {
-						this.plugin.settings.imageUpload.enabled =
-							toggle.getValue();
-					}
-					await this.plugin.saveSettings();
-					this.display();
-				});*/
-			});
-
-		new Setting(containerEl)
-			.setName("Image Upload Hoster")
-			.setDesc(
-				"Choose one of the provided image upload hoster. You have to get the credentials or the api key of your own!"
-			)
-			.addDropdown((dropdown) => {
-				dropdown
-					.addOption("https://api.imgur.com/", "Imgur")
-					.setDisabled(!this.plugin.settings.imageUpload.enabled)
-					.setValue(this.plugin.settings.imageUpload.host)
-					.onChange(async (value) => {
-						this.plugin.settings.imageUpload.host = value;
+			/*
+			containerEl.createEl("h2", { text: "Images (still in development)" });
+			new Setting(containerEl)
+				.setName("Image Translation (still  in development")
+				.setDesc("Should images be uploaded to one of the given hosts?")
+				.addToggle((toggle: ToggleComponent) => {
+					toggle.setDisabled(true);
+					toggle.setValue(this.plugin.settings.imageUpload.enabled);
+					toggle.onChange(async () => {
+						if (toggle.disabled) {
+							this.plugin.settings.imageUpload.enabled = false;
+							toggle.setValue(false);
+						} else {
+							this.plugin.settings.imageUpload.enabled =
+								toggle.getValue();
+						}
 						await this.plugin.saveSettings();
 						this.display();
 					});
-			});
+				});
 
-		new Setting(containerEl).setName("API Key").addText((text) =>
-			text
-				.setValue(this.plugin.settings.imageUpload.apiKey || "")
-				.setDisabled(!this.plugin.settings.imageUpload.enabled)
-				.onChange(async (value) => {
-					this.plugin.settings.imageUpload.apiKey = value;
-					await this.plugin.saveSettings();
-					this.display();
-				})
-		);
+			new Setting(containerEl)
+				.setName("Image Upload Hoster")
+				.setDesc(
+					"Choose one of the provided image upload hoster. You have to get the credentials or the api key of your own!"
+				)
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("https://api.imgur.com/", "Imgur")
+						.setDisabled(!this.plugin.settings.imageUpload.enabled)
+						.setValue(this.plugin.settings.imageUpload.host)
+						.onChange(async (value) => {
+							this.plugin.settings.imageUpload.host = value;
+							await this.plugin.saveSettings();
+							this.display();
+						});
+				});
+
+			new Setting(containerEl).setName("API Key").addText((text) =>
+				text
+					.setValue(this.plugin.settings.imageUpload.apiKey || "")
+					.setDisabled(!this.plugin.settings.imageUpload.enabled)
+					.onChange(async (value) => {
+						this.plugin.settings.imageUpload.apiKey = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);*/
+
+			const taskListVisualizationSetting = new Setting(containerEl)
+				.setName("Enable task list vizualization").addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.taskListVisualization.enabled)
+						.setDisabled(this.plugin.settings.useLegacyConverter)
+						.onChange(async (value) => {
+							this.plugin.settings.taskListVisualization.enabled = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+			);
+			
+			if (this.plugin.settings.taskListVisualization.enabled) {
+				taskListVisualizationSetting.addButton((btn) => {
+					btn.setIcon("plus")
+						.setTooltip("Add new mapping")
+						.onClick(async () => {
+							this.plugin.settings.taskListVisualization.mapping[
+								`[ ]${
+									Math.floor(Math.random() * 1000000)}`
+							] = calloutIcons.question.jiraTag;
+							await this.plugin.saveSettings();
+							this.display();
+						});
+				});
+	
+				let i = 1;
+				for (const [key, value] of Object.entries(this.plugin.settings.taskListVisualization.mapping)) {
+					new Setting(containerEl)
+						.setName(`Mapping ${i++}`)
+						.setDesc("")
+						.addText((text: any) => {
+							text
+								.setValue(key)
+								.setDisabled(!this.plugin.settings.taskListVisualization.enabled)
+								.onChange(async (value: string) => {
+									this.plugin.settings.taskListVisualization.mapping[key] = value;
+									await this.plugin.saveSettings();
+									this.display();
+								});
+						})
+						.addDropdown((dropdown: DropdownComponent) => {
+							dropdown
+								.addOptions(Object.entries(calloutIcons).reduce(
+									(acc, [key, { jiraTag, displayName }]) => ({
+										...acc,
+										[jiraTag]: displayName,
+									}),
+									{}
+								))
+								.setValue(value)
+								.setDisabled(!this.plugin.settings.taskListVisualization.enabled)
+								.onChange(async (value: string) => {
+									this.plugin.settings.taskListVisualization.mapping[key] = value;
+									await this.plugin.saveSettings();
+									this.display();
+								});
+						})
+						.addExtraButton((button: ExtraButtonComponent) => {
+							button.setIcon("cross").setTooltip("Delete mapping").onClick(async () => {
+								delete this.plugin.settings.taskListVisualization.mapping[key];
+								await this.plugin.saveSettings();
+								this.display();
+							});
+						});
+				}
+			}
+		}
+
+		
 
 		containerEl.createEl("h2", { text: "Callouts" });
 
@@ -211,191 +295,203 @@ export default class MTJSettingsTab extends PluginSettingTab {
 								settings.temp.createCalloutConfiguration
 							].contentColor,
 					});
+					this.plugin.settings.showCalloutConfiguration = true;
+					await this.plugin.saveSettings();
+					this.display();
+				});
+			})
+			.addButton((button: ButtonComponent) => {
+				button
+					.setIcon(this.plugin.settings.showCalloutConfiguration ? "up-chevron-glyph" : "down-chevron-glyph")
+					.setTooltip(this.plugin.settings.showCalloutConfiguration ? "Hide callout configuration" : "Show callout configuration").onClick(async () => {
+					this.plugin.settings.showCalloutConfiguration = !this.plugin.settings.showCalloutConfiguration;
 					await this.plugin.saveSettings();
 					this.display();
 				});
 			});
 
-		for (const [i, val] of settings.calloutConfigurations.entries()) {
-			containerEl.createEl("h2", {
-				text: `Callout-Config of ${val.identifier}:`,
-			});
-
-			new Setting(containerEl)
-				.setName("Choose title icon")
-				.addDropdown((dropdown: DropdownComponent) => {
-					dropdown
-						.addOptions(
-							Object.entries(calloutIcons).reduce(
-								(acc, [key, { jiraTag, displayName }]) => ({
-									...acc,
-									[jiraTag]: displayName,
-								}),
-								{}
-							)
-						)
-						.setValue(val.titleIcon)
-						.onChange(async (value) => {
-							settings.calloutConfigurations[i].titleIcon = value;
-							await this.plugin.saveSettings();
-						});
+		if (this.plugin.settings.showCalloutConfiguration) {
+			for (const [i, val] of settings.calloutConfigurations.entries()) {
+				containerEl.createEl("h2", {
+					text: `Callout-Config of ${val.identifier}:`,
 				});
 
-			new Setting(containerEl)
-				.setName(`Choose title text color:`)
-				.addColorPicker((colorPicker: ColorComponent) => {
-					colorPicker
-						.setValue(
-							settings.calloutConfigurations[i].titleColor ||
+				new Setting(containerEl)
+					.setName("Choose title icon")
+					.addDropdown((dropdown: DropdownComponent) => {
+						dropdown
+							.addOptions(
+								Object.entries(calloutIcons).reduce(
+									(acc, [key, { jiraTag, displayName }]) => ({
+										...acc,
+										[jiraTag]: displayName,
+									}),
+									{}
+								)
+							)
+							.setValue(val.titleIcon)
+							.onChange(async (value) => {
+								settings.calloutConfigurations[i].titleIcon = value;
+								await this.plugin.saveSettings();
+							});
+					});
+
+				new Setting(containerEl)
+					.setName(`Choose title text color:`)
+					.addColorPicker((colorPicker: ColorComponent) => {
+						colorPicker
+							.setValue(
+								settings.calloutConfigurations[i].titleColor ||
 								calloutTypesDefaultColors[val.identifier]
 									.titleColor
-						)
-						.onChange(async (color) => {
-							settings.calloutConfigurations[i].titleColor =
-								color;
-							await this.plugin.saveSettings();
-						});
-				})
-				.addExtraButton((btn) => {
-					btn.setIcon("reset")
-						.onClick(async () => {
-							settings.calloutConfigurations[i].titleColor =
-								calloutTypesDefaultColors[
-									val.identifier
-								].titleColor;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-						.setTooltip("restore default color");
-				});
+							)
+							.onChange(async (color) => {
+								settings.calloutConfigurations[i].titleColor =
+									color;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addExtraButton((btn) => {
+						btn.setIcon("reset")
+							.onClick(async () => {
+								settings.calloutConfigurations[i].titleColor =
+									calloutTypesDefaultColors[
+										val.identifier
+									].titleColor;
+								await this.plugin.saveSettings();
+								this.display();
+							})
+							.setTooltip("restore default color");
+					});
 
-			new Setting(containerEl)
-				.setName(`Choose title background color:`)
-				.addColorPicker((colorPicker: ColorComponent) => {
-					colorPicker
-						.setValue(
-							settings.calloutConfigurations[i].titleBgColor ||
+				new Setting(containerEl)
+					.setName(`Choose title background color:`)
+					.addColorPicker((colorPicker: ColorComponent) => {
+						colorPicker
+							.setValue(
+								settings.calloutConfigurations[i].titleBgColor ||
 								calloutTypesDefaultColors[val.identifier]
 									.titleBgColor
-						)
-						.onChange(async (color) => {
-							settings.calloutConfigurations[i].titleBgColor =
-								color;
-							await this.plugin.saveSettings();
-						});
-				})
-				.addExtraButton((btn) => {
-					btn.setIcon("reset")
-						.onClick(async () => {
-							settings.calloutConfigurations[i].titleBgColor =
-								calloutTypesDefaultColors[
-									val.identifier
-								].titleBgColor;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-						.setTooltip("restore default color");
-				});
+							)
+							.onChange(async (color) => {
+								settings.calloutConfigurations[i].titleBgColor =
+									color;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addExtraButton((btn) => {
+						btn.setIcon("reset")
+							.onClick(async () => {
+								settings.calloutConfigurations[i].titleBgColor =
+									calloutTypesDefaultColors[
+										val.identifier
+									].titleBgColor;
+								await this.plugin.saveSettings();
+								this.display();
+							})
+							.setTooltip("restore default color");
+					});
 
-			new Setting(containerEl)
-				.setName(`Choose content text color:`)
-				.addColorPicker((colorPicker: ColorComponent) => {
-					colorPicker
-						.setValue(
-							settings.calloutConfigurations[i].contentColor ||
+				new Setting(containerEl)
+					.setName(`Choose content text color:`)
+					.addColorPicker((colorPicker: ColorComponent) => {
+						colorPicker
+							.setValue(
+								settings.calloutConfigurations[i].contentColor ||
 								calloutTypesDefaultColors[val.identifier]
 									.contentColor
-						)
-						.onChange(async (color) => {
-							settings.calloutConfigurations[i].contentColor =
-								color;
-							await this.plugin.saveSettings();
-						});
-				})
-				.addExtraButton((btn) => {
-					btn.setIcon("reset")
-						.onClick(async () => {
-							settings.calloutConfigurations[i].contentColor =
-								calloutTypesDefaultColors[
-									val.identifier
-								].contentColor;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-						.setTooltip("restore default color");
-				});
+							)
+							.onChange(async (color) => {
+								settings.calloutConfigurations[i].contentColor =
+									color;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addExtraButton((btn) => {
+						btn.setIcon("reset")
+							.onClick(async () => {
+								settings.calloutConfigurations[i].contentColor =
+									calloutTypesDefaultColors[
+										val.identifier
+									].contentColor;
+								await this.plugin.saveSettings();
+								this.display();
+							})
+							.setTooltip("restore default color");
+					});
 
-			new Setting(containerEl)
-				.setName(`Choose content background color:`)
-				.addColorPicker((colorPicker: ColorComponent) => {
-					colorPicker
-						.setValue(
-							settings.calloutConfigurations[i].contentBgColor ||
+				new Setting(containerEl)
+					.setName(`Choose content background color:`)
+					.addColorPicker((colorPicker: ColorComponent) => {
+						colorPicker
+							.setValue(
+								settings.calloutConfigurations[i].contentBgColor ||
 								calloutTypesDefaultColors[val.identifier]
 									.contentBgColor
-						)
-						.onChange(async (color) => {
-							settings.calloutConfigurations[i].contentBgColor =
-								color;
-							await this.plugin.saveSettings();
-						});
-				})
-				.addExtraButton((btn) => {
-					btn.setIcon("reset")
-						.onClick(async () => {
-							settings.calloutConfigurations[i].contentBgColor =
-								calloutTypesDefaultColors[
-									val.identifier
-								].contentBgColor;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-						.setTooltip("restore default color");
-				});
+							)
+							.onChange(async (color) => {
+								settings.calloutConfigurations[i].contentBgColor =
+									color;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addExtraButton((btn) => {
+						btn.setIcon("reset")
+							.onClick(async () => {
+								settings.calloutConfigurations[i].contentBgColor =
+									calloutTypesDefaultColors[
+										val.identifier
+									].contentBgColor;
+								await this.plugin.saveSettings();
+								this.display();
+							})
+							.setTooltip("restore default color");
+					});
 
-			new Setting(containerEl)
-				.setName(`Choose content border color:`)
-				.addColorPicker((colorPicker: ColorComponent) => {
-					colorPicker
-						.setValue(
-							settings.calloutConfigurations[i]
-								.contentBorderColor ||
+				new Setting(containerEl)
+					.setName(`Choose content border color:`)
+					.addColorPicker((colorPicker: ColorComponent) => {
+						colorPicker
+							.setValue(
+								settings.calloutConfigurations[i]
+									.contentBorderColor ||
 								calloutTypesDefaultColors[val.identifier]
 									.contentBorderColor
-						)
-						.onChange(async (color) => {
-							settings.calloutConfigurations[
-								i
-							].contentBorderColor = color;
-							await this.plugin.saveSettings();
-						});
-				})
-				.addExtraButton((btn) => {
-					btn.setIcon("reset")
-						.onClick(async () => {
-							settings.calloutConfigurations[
-								i
-							].contentBorderColor =
-								calloutTypesDefaultColors[
-									val.identifier
-								].contentBorderColor;
+							)
+							.onChange(async (color) => {
+								settings.calloutConfigurations[
+									i
+								].contentBorderColor = color;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addExtraButton((btn) => {
+						btn.setIcon("reset")
+							.onClick(async () => {
+								settings.calloutConfigurations[
+									i
+								].contentBorderColor =
+									calloutTypesDefaultColors[
+										val.identifier
+									].contentBorderColor;
+								await this.plugin.saveSettings();
+								this.display();
+							})
+							.setTooltip("restore default color");
+					});
+
+				new Setting(containerEl)
+					.setName("Remove configuration")
+					.addButton((button: ButtonComponent) => {
+						button.setIcon("minus").onClick(async () => {
+							settings.calloutConfigurations.splice(i, 1);
 							await this.plugin.saveSettings();
 							this.display();
-						})
-						.setTooltip("restore default color");
-				});
-
-			new Setting(containerEl)
-				.setName("Remove configuration")
-				.addButton((button: ButtonComponent) => {
-					button.setIcon("minus").onClick(async () => {
-						settings.calloutConfigurations.splice(i, 1);
-						await this.plugin.saveSettings();
-						this.display();
+						});
 					});
-				});
 
-			containerEl.createEl("hr");
+				containerEl.createEl("hr");
+			}
 		}
 	}
 }
