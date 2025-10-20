@@ -24,16 +24,16 @@ export interface MTJCallout {
 	contentColor: string;
 }
 
-export interface MTJImageUpload {
-	enabled: boolean;
-	host: string;
-	apiKey: string | null;
-	username: string | null;
-	password: string | null;
+export type ImageUploadMethod = 'manual' | 'imgbb';
+
+export interface MTJImageUploadSettings {
+	method: ImageUploadMethod;
+	imgbb: {
+		apiKey: string;
+	};
 }
 
 export interface MTJPluginSettings {
-	imageEnableUploadToHost: boolean;
 	useLegacyConverter: boolean;
 	renderMetadata: boolean;
 	temp: {
@@ -41,7 +41,7 @@ export interface MTJPluginSettings {
 	};
 	showCalloutConfiguration: boolean;
 	calloutConfigurations: MTJCallout[];
-	imageUpload: MTJImageUpload;
+	imageUpload: MTJImageUploadSettings;
 	version: string;
 	taskListVisualization: {
 		enabled: boolean;
@@ -50,7 +50,6 @@ export interface MTJPluginSettings {
 }
 
 export const DEFAULT_SETTINGS: MTJPluginSettings = {
-	imageEnableUploadToHost: false,
 	useLegacyConverter: false,
 	renderMetadata: true,
 	temp: {
@@ -59,16 +58,22 @@ export const DEFAULT_SETTINGS: MTJPluginSettings = {
 	showCalloutConfiguration: true,
 	calloutConfigurations: [],
 	imageUpload: {
-		enabled: false,
-		host: "",
-		apiKey: "",
-		username: "",
-		password: "",
+		method: 'manual',
+		imgbb: {
+			apiKey: '',
+		},
 	},
 	version: '0.0.0',
 	taskListVisualization: {
-		enabled: false,
-		mapping: {},
+		enabled: true,
+		mapping: {
+			'[ ]': '(/)',     // Unchecked - checkbox
+			'[x]': '(on)',    // Checked - light bulb on
+			'[X]': '(on)',    // Checked (alternate)
+			'[>]': '(*b)',    // In progress - blue star
+			'[-]': '(-)',     // Cancelled - minus
+			'[/]': '(*y)',    // Partial - yellow star
+		},
 	},
 };
 
@@ -119,123 +124,142 @@ export default class MTJSettingsTab extends PluginSettingTab {
 							this.display();
 						})
 				);
-		
-			/*
-			containerEl.createEl("h2", { text: "Images (still in development)" });
-			new Setting(containerEl)
-				.setName("Image Translation (still  in development")
-				.setDesc("Should images be uploaded to one of the given hosts?")
-				.addToggle((toggle: ToggleComponent) => {
-					toggle.setDisabled(true);
-					toggle.setValue(this.plugin.settings.imageUpload.enabled);
-					toggle.onChange(async () => {
-						if (toggle.disabled) {
-							this.plugin.settings.imageUpload.enabled = false;
-							toggle.setValue(false);
-						} else {
-							this.plugin.settings.imageUpload.enabled =
-								toggle.getValue();
-						}
-						await this.plugin.saveSettings();
-						this.display();
-					});
-				});
 
-			new Setting(containerEl)
-				.setName("Image Upload Hoster")
-				.setDesc(
-					"Choose one of the provided image upload hoster. You have to get the credentials or the api key of your own!"
-				)
-				.addDropdown((dropdown) => {
-					dropdown
-						.addOption("https://api.imgur.com/", "Imgur")
-						.setDisabled(!this.plugin.settings.imageUpload.enabled)
-						.setValue(this.plugin.settings.imageUpload.host)
-						.onChange(async (value) => {
-							this.plugin.settings.imageUpload.host = value;
-							await this.plugin.saveSettings();
-							this.display();
-						});
-				});
+		containerEl.createEl("h2", { text: "Task Lists" });
 
-			new Setting(containerEl).setName("API Key").addText((text) =>
-				text
-					.setValue(this.plugin.settings.imageUpload.apiKey || "")
-					.setDisabled(!this.plugin.settings.imageUpload.enabled)
+		new Setting(containerEl)
+			.setName("Enable task list visualization")
+			.setDesc(
+				"Convert Markdown task list checkboxes (e.g., [ ], [x], [>]) to Jira emoticons in the output. " +
+				"This makes task status visible in Jira comments and descriptions."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.taskListVisualization.enabled)
+					.setDisabled(this.plugin.settings.useLegacyConverter)
 					.onChange(async (value) => {
-						this.plugin.settings.imageUpload.apiKey = value;
+						this.plugin.settings.taskListVisualization.enabled = value;
 						await this.plugin.saveSettings();
 						this.display();
 					})
-			);*/
+			);
 
-			const taskListVisualizationSetting = new Setting(containerEl)
-				.setName("Enable task list vizualization").addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.taskListVisualization.enabled)
-						.setDisabled(this.plugin.settings.useLegacyConverter)
-						.onChange(async (value) => {
-							this.plugin.settings.taskListVisualization.enabled = value;
+		if (this.plugin.settings.taskListVisualization.enabled) {
+			new Setting(containerEl)
+				.setName("Task state mappings")
+				.setDesc("Map task checkbox states to Jira emoticons. Common states are preconfigured.")
+				.setHeading();
+
+			const taskStates = [
+				{ key: '[ ]', label: 'Unchecked (incomplete)', default: '(/)' },
+				{ key: '[x]', label: 'Checked (complete)', default: '(on)' },
+				{ key: '[X]', label: 'Checked (complete, uppercase)', default: '(on)' },
+				{ key: '[>]', label: 'In progress / forwarded', default: '(*b)' },
+				{ key: '[-]', label: 'Cancelled / removed', default: '(-)' },
+				{ key: '[/]', label: 'Partially complete', default: '(*y)' },
+			];
+
+			for (const taskState of taskStates) {
+				if (!this.plugin.settings.taskListVisualization.mapping[taskState.key]) {
+					this.plugin.settings.taskListVisualization.mapping[taskState.key] = taskState.default;
+				}
+
+				const currentValue = this.plugin.settings.taskListVisualization.mapping[taskState.key];
+
+				new Setting(containerEl)
+					.setName(taskState.label)
+					.setDesc(`Markdown: \`- ${taskState.key} Task text\``)
+					.addDropdown((dropdown: DropdownComponent) => {
+						dropdown
+							.addOptions(Object.entries(calloutIcons).reduce(
+								(acc, [key, { jiraTag, displayName }]) => ({
+									...acc,
+									[jiraTag]: displayName,
+								}),
+								{}
+							))
+							.setValue(currentValue)
+							.onChange(async (value: string) => {
+								this.plugin.settings.taskListVisualization.mapping[taskState.key] = value;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addButton((button: ButtonComponent) => {
+						button
+							.setButtonText("Reset")
+							.setTooltip(`Reset to default: ${taskState.default}`)
+							.onClick(async () => {
+								this.plugin.settings.taskListVisualization.mapping[taskState.key] = taskState.default;
+								await this.plugin.saveSettings();
+								this.display();
+							});
+					});
+			}
+
+			new Setting(containerEl)
+				.setName("Custom task state mappings")
+				.setDesc("Add your own custom checkbox states (e.g., [!], [?], [*])");
+
+			const customMappings = Object.entries(this.plugin.settings.taskListVisualization.mapping)
+				.filter(([key]) => !taskStates.some(ts => ts.key === key));
+
+			for (const [key, value] of customMappings) {
+				new Setting(containerEl)
+					.setName("Custom mapping")
+					.addText((text: any) => {
+						text
+							.setPlaceholder("[?]")
+							.setValue(key)
+							.onChange(async (newKey: string) => {
+								if (newKey !== key) {
+									delete this.plugin.settings.taskListVisualization.mapping[key];
+									this.plugin.settings.taskListVisualization.mapping[newKey] = value;
+									await this.plugin.saveSettings();
+									this.display();
+								}
+							});
+					})
+					.addDropdown((dropdown: DropdownComponent) => {
+						dropdown
+							.addOptions(Object.entries(calloutIcons).reduce(
+								(acc, [key, { jiraTag, displayName }]) => ({
+									...acc,
+									[jiraTag]: displayName,
+								}),
+								{}
+							))
+							.setValue(value)
+							.onChange(async (value: string) => {
+								this.plugin.settings.taskListVisualization.mapping[key] = value;
+								await this.plugin.saveSettings();
+							});
+					})
+					.addExtraButton((button: ExtraButtonComponent) => {
+						button.setIcon("cross").setTooltip("Delete mapping").onClick(async () => {
+							delete this.plugin.settings.taskListVisualization.mapping[key];
 							await this.plugin.saveSettings();
 							this.display();
-						})
-			);
-			
-			if (this.plugin.settings.taskListVisualization.enabled) {
-				taskListVisualizationSetting.addButton((btn) => {
-					btn.setIcon("plus")
-						.setTooltip("Add new mapping")
+						});
+					});
+			}
+
+			new Setting(containerEl)
+				.addButton((button: ButtonComponent) => {
+					button
+						.setButtonText("Add custom mapping")
+						.setIcon("plus")
 						.onClick(async () => {
-							this.plugin.settings.taskListVisualization.mapping[
-								`[ ]${
-									Math.floor(Math.random() * 1000000)}`
-							] = calloutIcons.question.jiraTag;
+							let newKey = '[?]';
+							let counter = 1;
+							while (this.plugin.settings.taskListVisualization.mapping[newKey]) {
+								newKey = `[${counter}]`;
+								counter++;
+							}
+							this.plugin.settings.taskListVisualization.mapping[newKey] = calloutIcons.question.jiraTag;
 							await this.plugin.saveSettings();
 							this.display();
 						});
 				});
-	
-				let i = 1;
-				for (const [key, value] of Object.entries(this.plugin.settings.taskListVisualization.mapping)) {
-					new Setting(containerEl)
-						.setName(`Mapping ${i++}`)
-						.setDesc("")
-						.addText((text: any) => {
-							text
-								.setValue(key)
-								.setDisabled(!this.plugin.settings.taskListVisualization.enabled)
-								.onChange(async (value: string) => {
-									this.plugin.settings.taskListVisualization.mapping[key] = value;
-									await this.plugin.saveSettings();
-									this.display();
-								});
-						})
-						.addDropdown((dropdown: DropdownComponent) => {
-							dropdown
-								.addOptions(Object.entries(calloutIcons).reduce(
-									(acc, [key, { jiraTag, displayName }]) => ({
-										...acc,
-										[jiraTag]: displayName,
-									}),
-									{}
-								))
-								.setValue(value)
-								.setDisabled(!this.plugin.settings.taskListVisualization.enabled)
-								.onChange(async (value: string) => {
-									this.plugin.settings.taskListVisualization.mapping[key] = value;
-									await this.plugin.saveSettings();
-									this.display();
-								});
-						})
-						.addExtraButton((button: ExtraButtonComponent) => {
-							button.setIcon("cross").setTooltip("Delete mapping").onClick(async () => {
-								delete this.plugin.settings.taskListVisualization.mapping[key];
-								await this.plugin.saveSettings();
-								this.display();
-							});
-						});
-				}
-			}
 		}
 
 		
@@ -493,5 +517,67 @@ export default class MTJSettingsTab extends PluginSettingTab {
 				containerEl.createEl("hr");
 			}
 		}
+
+		containerEl.createEl("h2", { text: "Image Handling" });
+
+		new Setting(containerEl)
+			.setName("Image upload method")
+			.setDesc(
+				"Choose how to handle local images when converting to Jira markup. " +
+				"Manual: show warning to drag & drop manually. " +
+				"ImgBB: auto-upload to ImgBB (free API key required)."
+			)
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption('manual', 'Manual (drag & drop)')
+					.addOption('imgbb', 'Auto-upload to ImgBB')
+					.setValue(this.plugin.settings.imageUpload.method)
+					.onChange(async (value: ImageUploadMethod) => {
+						this.plugin.settings.imageUpload.method = value;
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
+
+		if (this.plugin.settings.imageUpload.method === 'imgbb') {
+			const warningEl = containerEl.createDiv({
+				cls: 'imgbb-privacy-warning',
+			});
+			warningEl.createEl('h3', {
+				text: '⚠️ Important Privacy Notice',
+				attr: { style: 'color: #d97706; margin-top: 0;' }
+			});
+			warningEl.createEl('p', {
+				text: 'Images uploaded to ImgBB are publicly accessible. Anyone with the URL can view your images.',
+				attr: { style: 'margin: 0.5em 0;' }
+			});
+			warningEl.createEl('p', {
+				text: 'By using ImgBB, you agree to their Terms of Service and Privacy Policy (available at imgbb.com). This plugin is not affiliated with or responsible for ImgBB\'s service.',
+				attr: { style: 'margin: 0.5em 0; font-size: 0.9em;' }
+			});
+			warningEl.style.backgroundColor = 'transparent';
+			warningEl.style.border = '1px solid #f59e0b';
+			warningEl.style.borderRadius = '6px';
+			warningEl.style.padding = '1em';
+			warningEl.style.marginBottom = '1em';
+
+			new Setting(containerEl)
+				.setName("ImgBB API Key")
+				.setDesc(
+					"Get your free API key by creating an account at https://imgbb.com and visiting https://api.imgbb.com. " +
+					"ImgBB supports images up to 32 MB with unlimited uploads."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("Enter API Key")
+						.setValue(this.plugin.settings.imageUpload.imgbb.apiKey)
+						.onChange(async (value) => {
+							this.plugin.settings.imageUpload.imgbb.apiKey = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
 	}
+
+}
 }
