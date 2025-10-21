@@ -47,6 +47,11 @@ The converter is based on [this project](https://github.com/FokkeZB/J2M)
 
 ## Releases
 
+## 0.3.0: Finished fully functional new converter
+- polished new converter (legacy converter will be removed within the next update)
+- added requested feature [#7](https://github.com/muckmuck96/obsidian-md-to-jira/issues/7) in new converter
+- added image translation [#2](https://github.com/muckmuck96/obsidian-md-to-jira/issues/2) in new converter
+
 ## 0.2.1: Improved line break handling
 - fixed reported issue [#6](https://github.com/muckmuck96/obsidian-md-to-jira/issues/6) in new converter
 
