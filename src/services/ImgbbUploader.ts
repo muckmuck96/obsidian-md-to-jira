@@ -1,4 +1,5 @@
 import { requestUrl, RequestUrlParam } from 'obsidian';
+import { MESSAGES } from '../constants';
 
 export interface ImgbbUploadResult {
 	success: boolean;
@@ -17,18 +18,12 @@ export class ImgbbUploader {
 		if (!this.apiKey) {
 			return {
 				success: false,
-				error: 'ImgBB API key not configured',
+				error: MESSAGES.ERRORS.NO_API_KEY,
 			};
 		}
 
-		console.log(`[ImgbbUploader] Starting upload for: ${filename}`);
-		console.log(`[ImgbbUploader] Image size: ${imageData.byteLength} bytes`);
-		console.log(`[ImgbbUploader] API key length: ${this.apiKey.length}`);
-
 		try {
 			const base64 = this.arrayBufferToBase64(imageData);
-			console.log(`[ImgbbUploader] Base64 length: ${base64.length}`);
-			console.log(`[ImgbbUploader] Base64 preview: ${base64.substring(0, 50)}...`);
 
 			// ImgBB expects URL-encoded form data
 			const formBody = new URLSearchParams();
@@ -36,8 +31,6 @@ export class ImgbbUploader {
 			formBody.append('name', filename);
 
 			const url = `https://api.imgbb.com/1/upload?key=${this.apiKey}`;
-			console.log(`[ImgbbUploader] Request URL: ${url.replace(this.apiKey, 'HIDDEN')}`);
-			console.log(`[ImgbbUploader] Form body length: ${formBody.toString().length}`);
 
 			const requestParam: RequestUrlParam = {
 				url: url,
@@ -50,15 +43,7 @@ export class ImgbbUploader {
 
 			const response = await requestUrl(requestParam);
 
-			console.log(`[ImgbbUploader] Response status: ${response.status}`);
-			console.log(`[ImgbbUploader] Response body:`, response.text);
-
-			if (response.json) {
-				console.log(`[ImgbbUploader] Response JSON:`, response.json);
-			}
-
 			if (response.status === 200 && response.json?.data?.url) {
-				console.log(`[ImgbbUploader] Upload successful! URL: ${response.json.data.url}`);
 				return {
 					success: true,
 					url: response.json.data.url,
@@ -66,20 +51,15 @@ export class ImgbbUploader {
 			} else {
 				return {
 					success: false,
-					error: `ImgBB upload failed: ${response.status} - ${response.text}`,
+					error: `${MESSAGES.ERRORS.UPLOAD_FAILED}: ${response.status}`,
 				};
 			}
 		} catch (error) {
 			console.error(`[ImgbbUploader] Upload error:`, error);
-			console.error(`[ImgbbUploader] Error details:`, {
-				message: error.message,
-				name: error.name,
-				stack: error.stack
-			});
 
 			return {
 				success: false,
-				error: `ImgBB upload error: ${error.message}`,
+				error: `ImgBB upload error: ${error instanceof Error ? error.message : String(error)}`,
 			};
 		}
 	}
