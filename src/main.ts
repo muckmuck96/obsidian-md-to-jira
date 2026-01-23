@@ -1,16 +1,23 @@
-import { Editor, Plugin } from "obsidian";
+import { Editor, Notice, Plugin } from "obsidian";
 
-import { J2M } from "./j2m";
 import MTJSettingsTab, {
 	DEFAULT_SETTINGS,
 	MTJPluginSettings,
 } from "./settings";
 import { Translator } from "./core/Translator";
+import { ConfluenceTranslator } from "./core/ConfluenceTranslator";
+import { ReverseTranslator } from "./core/ReverseTranslator";
 import { UpdateModal } from "./modals/UpdateModal";
+import { PreviewModal } from "./modals/PreviewModal";
+import { ClipboardDetector } from "./services/ClipboardDetector";
+import { ConversionOfferModal } from "./modals/ConversionOfferModal";
+import { MESSAGES } from "./constants";
 
 export default class MTJPlugin extends Plugin {
 	settings: MTJPluginSettings;
 	translator: Translator;
+	confluenceTranslator: ConfluenceTranslator;
+	reverseTranslator: ReverseTranslator;
 
 	async onload() {
 		await this.loadSettings();
@@ -29,6 +36,10 @@ export default class MTJPlugin extends Plugin {
 		}
 
 		this.translator = new Translator(this);
+		this.confluenceTranslator = new ConfluenceTranslator(this);
+		this.reverseTranslator = new ReverseTranslator();
+
+		// Convert note to Jira markup
 		this.addCommand({
 			id: "mtj-convert-note-to-jira",
 			name: "Note to Jira markup (clipboard)",
@@ -38,6 +49,7 @@ export default class MTJPlugin extends Plugin {
 			},
 		});
 
+		// Convert selection to Jira markup
 		this.addCommand({
 			id: "mtj-convert-selection-to-jira",
 			name: "Selection to Jira markup (clipboard)",
@@ -47,29 +59,117 @@ export default class MTJPlugin extends Plugin {
 			},
 		});
 
+		// Convert Jira markup from clipboard to Markdown
 		this.addCommand({
 			id: "mtj-convert-jira-selection-to-markdown",
 			name: "Jira markup (clipboard) to markdown note",
 			editorCallback: async (editor: Editor) => {
 				const markup = await navigator.clipboard.readText();
-				const markdown = J2M.toM(markup);
+				const markdown = this.reverseTranslator.convertJiraToMarkdown(markup);
 				editor.replaceSelection(markdown);
 			},
 		});
+
+		// Convert Confluence markup from clipboard to Markdown
+		this.addCommand({
+			id: "mtj-convert-confluence-selection-to-markdown",
+			name: "Confluence markup (clipboard) to markdown note",
+			editorCallback: async (editor: Editor) => {
+				const markup = await navigator.clipboard.readText();
+				// ReverseTranslator handles both Jira and Confluence markup
+				const markdown = this.reverseTranslator.convertJiraToMarkdown(markup);
+				editor.replaceSelection(markdown);
+			},
+		});
+
+		// Convert note to Confluence markup
+		this.addCommand({
+			id: "mtj-convert-note-to-confluence",
+			name: "Note to Confluence markup (clipboard)",
+			editorCallback: async (editor: Editor) => {
+				const content = editor.getDoc().getValue();
+				await this.convertToConfluence(content);
+			},
+		});
+
+		// Convert selection to Confluence markup
+		this.addCommand({
+			id: "mtj-convert-selection-to-confluence",
+			name: "Selection to Confluence markup (clipboard)",
+			editorCallback: async (editor: Editor) => {
+				const content = editor.getSelection();
+				await this.convertToConfluence(content);
+			},
+		});
+
+		// Register paste event handler for auto-detection
+		// Note: Must handle synchronously to properly preventDefault
+		this.registerEvent(
+			this.app.workspace.on('editor-paste', (evt: ClipboardEvent, editor: Editor) => {
+				if (!this.settings.autoDetectJiraPaste) {
+					return;
+				}
+
+				const clipboardText = evt.clipboardData?.getData('text/plain');
+				if (!clipboardText || clipboardText.trim().length === 0) {
+					return;
+				}
+
+				const markupType = ClipboardDetector.detectMarkupType(clipboardText);
+
+				if (markupType === 'jira' || markupType === 'confluence') {
+					// Must call preventDefault synchronously before any async work
+					evt.preventDefault();
+
+					// Store references for use in modal callback
+					const reverseTranslator = this.reverseTranslator;
+
+					new ConversionOfferModal(
+						this.app,
+						clipboardText,
+						markupType,
+						(shouldConvert) => {
+							if (shouldConvert) {
+								const markdown = reverseTranslator.convertJiraToMarkdown(clipboardText);
+								editor.replaceSelection(markdown);
+							} else {
+								editor.replaceSelection(clipboardText);
+							}
+						}
+					).open();
+				}
+			})
+		);
 
 		this.addSettingTab(new MTJSettingsTab(this.app, this));
 	}
 
 	async convertToJira(content: string): Promise<void> {
-		let markup = "";
+		const markup = await this.translator.convertMarkdownToJira(content);
 
-		if (this.settings.useLegacyConverter) {
-			markup = J2M.toJ(content, this.settings);
+		if (this.settings.showPreviewBeforeCopy) {
+			new PreviewModal(this.app, markup, 'jira', async () => {
+				await navigator.clipboard.writeText(markup);
+				new Notice(MESSAGES.SUCCESS.COPIED_CLIPBOARD);
+			}).open();
 		} else {
-			markup = await this.translator.convertMarkdownToJira(content);
+			await navigator.clipboard.writeText(markup);
+			new Notice(MESSAGES.SUCCESS.COPIED_CLIPBOARD);
 		}
+	}
 
-		await navigator.clipboard.writeText(markup);
+	async convertToConfluence(content: string): Promise<void> {
+		const markup = await this.confluenceTranslator.convertMarkdownToConfluence(content);
+
+		if (this.settings.showPreviewBeforeCopy) {
+			new PreviewModal(this.app, markup, 'confluence', async () => {
+				await navigator.clipboard.writeText(markup);
+				new Notice(MESSAGES.SUCCESS.COPIED_CLIPBOARD);
+			}).open();
+		} else {
+			await navigator.clipboard.writeText(markup);
+			new Notice(MESSAGES.SUCCESS.COPIED_CLIPBOARD);
+		}
 	}
 
 	onunload() {}
@@ -94,7 +194,7 @@ export default class MTJPlugin extends Plugin {
 				loadedData.imageUpload = {
 					method: 'manual', // Default to manual for safety
 					imgbb: {
-						apiKey: '', 
+						apiKey: '',
 					}
 				};
 
@@ -144,6 +244,13 @@ export default class MTJPlugin extends Plugin {
 					}
 				};
 				needsMigration = true;
+			}
+
+			// Remove deprecated useLegacyConverter setting
+			if ((loadedData as any).useLegacyConverter !== undefined) {
+				delete (loadedData as any).useLegacyConverter;
+				needsMigration = true;
+				console.log('[MTJPlugin] Removed deprecated useLegacyConverter setting');
 			}
 		}
 

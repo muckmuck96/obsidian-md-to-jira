@@ -2,7 +2,6 @@ import {
 	App,
 	PluginSettingTab,
 	Setting,
-	ToggleComponent,
 	Notice,
 	ButtonComponent,
 	DropdownComponent,
@@ -13,6 +12,8 @@ import MTJPlugin from "./main";
 import { calloutTypes } from "./utils/calloutTypes";
 import { calloutTypesDefaultColors } from "./utils/calloutTypeDefaultColors";
 import { calloutIcons } from "./utils/calloutIcons";
+import { ImgbbValidator } from "./services/ImgbbValidator";
+import { MESSAGES } from "./constants";
 
 export interface MTJCallout {
 	identifier: string;
@@ -25,6 +26,8 @@ export interface MTJCallout {
 }
 
 export type ImageUploadMethod = 'manual' | 'imgbb';
+export type OutputFormat = 'jira' | 'confluence';
+export type MermaidHandling = 'code-block' | 'plantuml' | 'warning';
 
 export interface MTJImageUploadSettings {
 	method: ImageUploadMethod;
@@ -33,8 +36,13 @@ export interface MTJImageUploadSettings {
 	};
 }
 
+export interface MTJJiraIssueLinkSettings {
+	enabled: boolean;
+	projectKeys: string;
+	baseUrl: string;
+}
+
 export interface MTJPluginSettings {
-	useLegacyConverter: boolean;
 	renderMetadata: boolean;
 	temp: {
 		createCalloutConfiguration: string;
@@ -47,10 +55,16 @@ export interface MTJPluginSettings {
 		enabled: boolean;
 		mapping: Record<string, string>;
 	};
+	// New settings
+	outputFormat: OutputFormat;
+	autoDetectJiraPaste: boolean;
+	mermaidHandling: MermaidHandling;
+	convertMentions: boolean;
+	jiraIssueLink: MTJJiraIssueLinkSettings;
+	showPreviewBeforeCopy: boolean;
 }
 
 export const DEFAULT_SETTINGS: MTJPluginSettings = {
-	useLegacyConverter: false,
 	renderMetadata: true,
 	temp: {
 		createCalloutConfiguration: "",
@@ -75,6 +89,16 @@ export const DEFAULT_SETTINGS: MTJPluginSettings = {
 			'[/]': '(*y)',    // Partial - yellow star
 		},
 	},
+	outputFormat: 'jira',
+	autoDetectJiraPaste: false,
+	mermaidHandling: 'code-block',
+	convertMentions: true,
+	jiraIssueLink: {
+		enabled: false,
+		projectKeys: '',
+		baseUrl: '',
+	},
+	showPreviewBeforeCopy: false,
 };
 
 export default class MTJSettingsTab extends PluginSettingTab {
@@ -91,40 +115,62 @@ export default class MTJSettingsTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		// Output Format Selection
 		new Setting(containerEl)
-			.setName("Use Legacy Converter")
-			.setDesc(
-				"We are in the process of developing an enhanced converter that aims to support all previous formatting options. However, there might still be some features that are not fully functional. If you encounter any issues, you can use this toggle to switch back to the previous converter."
-			)
+			.setName("Output format")
+			.setDesc("Choose the target markup format for conversion.")
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption('jira', 'Jira')
+					.addOption('confluence', 'Confluence')
+					.setValue(this.plugin.settings.outputFormat)
+					.onChange(async (value: OutputFormat) => {
+						this.plugin.settings.outputFormat = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Render metadata")
+			.setDesc("Transforms the metadata at the top of an Obsidian note, enclosed by ---, into a Jira-compatible format, resulting in a list of key-value pairs labeled as 'Metadata'.")
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.useLegacyConverter)
+					.setValue(this.plugin.settings.renderMetadata)
 					.onChange(async (value) => {
-						this.plugin.settings.useLegacyConverter = value;
-						if (value) {
-							this.plugin.settings.renderMetadata = false;
-						}
+						this.plugin.settings.renderMetadata = value;
 						await this.plugin.saveSettings();
 						this.display();
 					})
-		);
+			);
 
-		if (!this.plugin.settings.useLegacyConverter) {
+		new Setting(containerEl)
+			.setName("Show preview before copy")
+			.setDesc("Display a preview modal showing the converted markup before copying to clipboard.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showPreviewBeforeCopy)
+					.onChange(async (value) => {
+						this.plugin.settings.showPreviewBeforeCopy = value;
+						await this.plugin.saveSettings();
+					})
+			);
 
-			new Setting(containerEl)
-				.setName("Render metadata")
-				.setDesc("Transforms the metadata at the top of an Obsidian note, enclosed by ---, into a Jira-compatible format, resulting in a list of key-value pairs labeled as 'Metadata'. Only works with the new converter!")
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.renderMetadata)
-						.setDisabled(this.plugin.settings.useLegacyConverter)
-						.onChange(async (value) => {
-							this.plugin.settings.renderMetadata = value;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-				);
+		// Paste Detection Section
+		containerEl.createEl("h2", { text: "Clipboard Detection" });
 
+		new Setting(containerEl)
+			.setName("Auto-detect Jira markup on paste")
+			.setDesc("When pasting, detect if the clipboard contains Jira/Confluence markup and offer to convert it to Markdown.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoDetectJiraPaste)
+					.onChange(async (value) => {
+						this.plugin.settings.autoDetectJiraPaste = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Task Lists Section
 		containerEl.createEl("h2", { text: "Task Lists" });
 
 		new Setting(containerEl)
@@ -136,7 +182,6 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.taskListVisualization.enabled)
-					.setDisabled(this.plugin.settings.useLegacyConverter)
 					.onChange(async (value) => {
 						this.plugin.settings.taskListVisualization.enabled = value;
 						await this.plugin.saveSettings();
@@ -262,8 +307,81 @@ export default class MTJSettingsTab extends PluginSettingTab {
 				});
 		}
 
-		
+		// Mentions & Issue Links Section
+		containerEl.createEl("h2", { text: "Mentions & Issue Links" });
 
+		new Setting(containerEl)
+			.setName("Convert @mentions")
+			.setDesc("Convert @username mentions to Jira user mentions [~username].")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.convertMentions)
+					.onChange(async (value) => {
+						this.plugin.settings.convertMentions = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Enable Jira issue linking")
+			.setDesc("Automatically convert issue keys (e.g., PROJ-123) to Jira links.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.jiraIssueLink.enabled)
+					.onChange(async (value) => {
+						this.plugin.settings.jiraIssueLink.enabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.jiraIssueLink.enabled) {
+			new Setting(containerEl)
+				.setName("Project keys")
+				.setDesc("Comma-separated list of Jira project keys (e.g., PROJ,DEV,OPS).")
+				.addText((text) =>
+					text
+						.setPlaceholder("PROJ,DEV,OPS")
+						.setValue(this.plugin.settings.jiraIssueLink.projectKeys)
+						.onChange(async (value) => {
+							this.plugin.settings.jiraIssueLink.projectKeys = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Jira base URL")
+				.setDesc("Your Jira instance URL (e.g., https://your-company.atlassian.net).")
+				.addText((text) =>
+					text
+						.setPlaceholder("https://your-company.atlassian.net")
+						.setValue(this.plugin.settings.jiraIssueLink.baseUrl)
+						.onChange(async (value) => {
+							this.plugin.settings.jiraIssueLink.baseUrl = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		// Mermaid Section
+		containerEl.createEl("h2", { text: "Mermaid Diagrams" });
+
+		new Setting(containerEl)
+			.setName("Mermaid diagram handling")
+			.setDesc("Choose how to handle Mermaid diagram code blocks during conversion.")
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption('code-block', 'Keep as code block')
+					.addOption('plantuml', 'Convert to PlantUML (basic)')
+					.addOption('warning', 'Show warning message')
+					.setValue(this.plugin.settings.mermaidHandling)
+					.onChange(async (value: MermaidHandling) => {
+						this.plugin.settings.mermaidHandling = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Callouts Section
 		containerEl.createEl("h2", { text: "Callouts" });
 
 		new Setting(containerEl)
@@ -518,6 +636,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			}
 		}
 
+		// Image Handling Section
 		containerEl.createEl("h2", { text: "Image Handling" });
 
 		new Setting(containerEl)
@@ -544,11 +663,11 @@ export default class MTJSettingsTab extends PluginSettingTab {
 				cls: 'imgbb-privacy-warning',
 			});
 			warningEl.createEl('h3', {
-				text: '⚠️ Important Privacy Notice',
+				text: '! Important Privacy Notice',
 				attr: { style: 'color: #d97706; margin-top: 0;' }
 			});
 			warningEl.createEl('p', {
-				text: 'Images uploaded to ImgBB are publicly accessible. Anyone with the URL can view your images.',
+				text: MESSAGES.WARNINGS.PRIVACY_NOTICE,
 				attr: { style: 'margin: 0.5em 0;' }
 			});
 			warningEl.createEl('p', {
@@ -575,9 +694,35 @@ export default class MTJSettingsTab extends PluginSettingTab {
 							this.plugin.settings.imageUpload.imgbb.apiKey = value;
 							await this.plugin.saveSettings();
 						})
-				);
+				)
+				.addButton((button: ButtonComponent) => {
+					button
+						.setButtonText("Test API Key")
+						.onClick(async () => {
+							const apiKey = this.plugin.settings.imageUpload.imgbb.apiKey;
+							if (!apiKey) {
+								new Notice("Please enter an API key first");
+								return;
+							}
+
+							button.setButtonText("Testing...");
+							button.setDisabled(true);
+
+							try {
+								const result = await ImgbbValidator.validateApiKey(apiKey);
+								if (result.valid) {
+									new Notice(MESSAGES.SUCCESS.API_KEY_VALID);
+								} else {
+									new Notice(`API key validation failed: ${result.error}`);
+								}
+							} catch (error) {
+								new Notice(`Validation error: ${error instanceof Error ? error.message : String(error)}`);
+							} finally {
+								button.setButtonText("Test API Key");
+								button.setDisabled(false);
+							}
+						});
+				});
 		}
 	}
-
-}
 }

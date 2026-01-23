@@ -58,7 +58,6 @@ describe('Translator - Markdown to Jira Conversion', () => {
         };
 
         defaultSettings = {
-            useLegacyConverter: false,
             renderMetadata: false,
             calloutConfigurations: [defaultCallout],
             taskListVisualization: {
@@ -75,7 +74,17 @@ describe('Translator - Markdown to Jira Conversion', () => {
                 createCalloutConfiguration: ''
             },
             showCalloutConfiguration: false,
-            version: '0.0.0'
+            version: '0.0.0',
+            outputFormat: 'jira',
+            autoDetectJiraPaste: true,
+            mermaidHandling: 'code-block',
+            convertMentions: false,
+            jiraIssueLink: {
+                enabled: false,
+                projectKeys: '',
+                baseUrl: '',
+            },
+            showPreviewBeforeCopy: false,
         };
 
         mockPlugin = {
@@ -862,6 +871,166 @@ Regular paragraph text.
             expect(result).toContain('(/)');
             expect(result).toContain('(*b)');
             expect(result).toContain('(-)');
+        });
+    });
+
+    describe('Mentions', () => {
+        beforeEach(() => {
+            mockPlugin.settings.convertMentions = true;
+        });
+
+        test('should convert @username to Jira mention', async () => {
+            const markdown = 'Hello @john.doe, please review this';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[~john.doe]');
+        });
+
+        test('should convert multiple @mentions', async () => {
+            const markdown = 'CC: @alice and @bob for review';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[~alice]');
+            expect(result).toContain('[~bob]');
+        });
+
+        test('should handle @mention at start of line', async () => {
+            const markdown = '@admin please check this';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[~admin]');
+        });
+
+        test('should handle @mention with dots and underscores', async () => {
+            const markdown = 'Assigned to @john.doe_smith';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[~john.doe_smith]');
+        });
+
+        test('should not convert when mentions disabled', async () => {
+            mockPlugin.settings.convertMentions = false;
+            translator = new Translator(mockPlugin);
+            const markdown = 'Hello @john';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('@john');
+            expect(result).not.toContain('[~john]');
+        });
+    });
+
+    describe('Issue Links', () => {
+        beforeEach(() => {
+            mockPlugin.settings.jiraIssueLink = {
+                enabled: true,
+                projectKeys: 'PROJ,DEV,OPS',
+                baseUrl: 'https://jira.example.com',
+            };
+        });
+
+        test('should convert issue key to link', async () => {
+            const markdown = 'See PROJ-123 for details';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[PROJ-123|https://jira.example.com/browse/PROJ-123]');
+        });
+
+        test('should convert multiple issue keys', async () => {
+            const markdown = 'Related to PROJ-123 and DEV-456';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[PROJ-123|https://jira.example.com/browse/PROJ-123]');
+            expect(result).toContain('[DEV-456|https://jira.example.com/browse/DEV-456]');
+        });
+
+        test('should handle issue key at start of line', async () => {
+            const markdown = 'PROJ-999 is the main ticket';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('[PROJ-999|https://jira.example.com/browse/PROJ-999]');
+        });
+
+        test('should not convert unknown project keys', async () => {
+            const markdown = 'See UNKNOWN-123 for details';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).not.toContain('[UNKNOWN-123|');
+            expect(result).toContain('UNKNOWN-123');
+        });
+
+        test('should not convert when issue links disabled', async () => {
+            mockPlugin.settings.jiraIssueLink.enabled = false;
+            translator = new Translator(mockPlugin);
+            const markdown = 'See PROJ-123';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).not.toContain('[PROJ-123|');
+        });
+    });
+
+    describe('Mermaid Diagrams', () => {
+        test('should keep mermaid as code block by default', async () => {
+            mockPlugin.settings.mermaidHandling = 'code-block';
+            translator = new Translator(mockPlugin);
+
+            const markdown = '```mermaid\ngraph LR\n  A --> B\n```';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('{code:mermaid}');
+            expect(result).toContain('graph LR');
+        });
+
+        test('should show warning for mermaid when configured', async () => {
+            mockPlugin.settings.mermaidHandling = 'warning';
+            translator = new Translator(mockPlugin);
+
+            const markdown = '```mermaid\nsequenceDiagram\n  A->>B: Hello\n```';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('{panel:');
+            expect(result).toContain('Warning');
+            expect(result).toContain('Mermaid');
+        });
+
+        test('should convert to PlantUML when configured', async () => {
+            mockPlugin.settings.mermaidHandling = 'plantuml';
+            translator = new Translator(mockPlugin);
+
+            const markdown = '```mermaid\nsequenceDiagram\n  A->>B: message\n```';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('{code:plantuml}');
+            expect(result).toContain('@startuml');
+            expect(result).toContain('@enduml');
+        });
+    });
+
+    describe('Sync/Async Path Optimization', () => {
+        test('should detect processable local images', () => {
+            expect(translator.containsProcessableImages('![Alt](./local.png)')).toBe(true);
+            expect(translator.containsProcessableImages('![[local.jpg]]')).toBe(true);
+        });
+
+        test('should not detect URL images as processable', () => {
+            expect(translator.containsProcessableImages('![Alt](https://example.com/img.png)')).toBe(false);
+        });
+
+        test('should not detect base64 images as processable', () => {
+            expect(translator.containsProcessableImages('![Alt](data:image/png;base64,abc)')).toBe(false);
+        });
+
+        test('should handle mixed content correctly', () => {
+            const mixed = '![URL](https://example.com/img.png)\n\n![Local](./local.png)';
+            expect(translator.containsProcessableImages(mixed)).toBe(true);
+        });
+
+        test('sync conversion should work for simple content', () => {
+            const markdown = '# Heading\n\n**Bold** text';
+            const result = translator.convertMarkdownToJiraSync(markdown);
+            expect(result).toContain('h1. Heading');
+            expect(result).toContain('*Bold*');
+        });
+    });
+
+    describe('ImageHandler Mock Scenarios', () => {
+        test('should handle URL images correctly', async () => {
+            const markdown = '![Alt Text](https://example.com/image.png)';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('!https://example.com/image.png|alt=Alt Text!');
+        });
+
+        test('should show warning for local images', async () => {
+            const markdown = '![Local Image](./local-image.png)';
+            const result = await translator.convertMarkdownToJira(markdown);
+            expect(result).toContain('{panel:borderColor=#ffecb5|bgColor=#fff3cd}');
+            expect(result).toContain('Warning');
         });
     });
 });
