@@ -47,6 +47,15 @@ The legacy converter is based on [this project](https://github.com/FokkeZB/J2M)
 
 ## Releases
 
+
+## 1.0.0: New Features on new converter
+- added markup preview modal
+- added auto detection of pasting jira markup in obsidian
+- added mention and jira issue conversions
+- added mermaid diagram support
+- added support for confluence markup
+- fixed some bugs
+
 ## 0.3.0: Finished fully functional new converter
 - polished new converter (legacy converter will be removed within the next update)
 - added requested feature [#7](https://github.com/muckmuck96/obsidian-md-to-jira/issues/7) in new converter
