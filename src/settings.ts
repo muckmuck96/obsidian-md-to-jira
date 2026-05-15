@@ -7,6 +7,7 @@ import {
 	DropdownComponent,
 	ColorComponent,
 	ExtraButtonComponent,
+	TextComponent,
 } from "obsidian";
 import MTJPlugin from "./main";
 import { calloutTypes } from "./utils/calloutTypes";
@@ -156,7 +157,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			);
 
 		// Paste Detection Section
-		containerEl.createEl("h2", { text: "Clipboard Detection" });
+		new Setting(containerEl).setName("Clipboard detection").setHeading();
 
 		new Setting(containerEl)
 			.setName("Auto-detect Jira markup on paste")
@@ -171,7 +172,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			);
 
 		// Task Lists Section
-		containerEl.createEl("h2", { text: "Task Lists" });
+		new Setting(containerEl).setName("Task lists").setHeading();
 
 		new Setting(containerEl)
 			.setName("Enable task list visualization")
@@ -251,7 +252,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			for (const [key, value] of customMappings) {
 				new Setting(containerEl)
 					.setName("Custom mapping")
-					.addText((text: any) => {
+					.addText((text: TextComponent) => {
 						text
 							.setPlaceholder("[?]")
 							.setValue(key)
@@ -308,7 +309,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 		}
 
 		// Mentions & Issue Links Section
-		containerEl.createEl("h2", { text: "Mentions & Issue Links" });
+		new Setting(containerEl).setName("Mentions & issue links").setHeading();
 
 		new Setting(containerEl)
 			.setName("Convert @mentions")
@@ -364,7 +365,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 		}
 
 		// Mermaid Section
-		containerEl.createEl("h2", { text: "Mermaid Diagrams" });
+		new Setting(containerEl).setName("Mermaid diagrams").setHeading();
 
 		new Setting(containerEl)
 			.setName("Mermaid diagram handling")
@@ -382,7 +383,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			});
 
 		// Callouts Section
-		containerEl.createEl("h2", { text: "Callouts" });
+		new Setting(containerEl).setName("Callouts").setHeading();
 
 		new Setting(containerEl)
 			.setName("Add callout configuration")
@@ -454,9 +455,9 @@ export default class MTJSettingsTab extends PluginSettingTab {
 
 		if (this.plugin.settings.showCalloutConfiguration) {
 			for (const [i, val] of settings.calloutConfigurations.entries()) {
-				containerEl.createEl("h2", {
-					text: `Callout-Config of ${val.identifier}:`,
-				});
+				new Setting(containerEl)
+					.setName(`Callout-Config of ${val.identifier}:`)
+					.setHeading();
 
 				new Setting(containerEl)
 					.setName("Choose title icon")
@@ -637,7 +638,7 @@ export default class MTJSettingsTab extends PluginSettingTab {
 		}
 
 		// Image Handling Section
-		containerEl.createEl("h2", { text: "Image Handling" });
+		new Setting(containerEl).setName("Image handling").setHeading();
 
 		new Setting(containerEl)
 			.setName("Image upload method")
@@ -662,23 +663,17 @@ export default class MTJSettingsTab extends PluginSettingTab {
 			const warningEl = containerEl.createDiv({
 				cls: 'imgbb-privacy-warning',
 			});
-			warningEl.createEl('h3', {
-				text: '! Important Privacy Notice',
-				attr: { style: 'color: #d97706; margin-top: 0;' }
+			warningEl.createDiv({
+				cls: 'mtj-warning-title',
+				text: '! Important privacy notice',
 			});
 			warningEl.createEl('p', {
 				text: MESSAGES.WARNINGS.PRIVACY_NOTICE,
-				attr: { style: 'margin: 0.5em 0;' }
 			});
 			warningEl.createEl('p', {
-				text: 'By using ImgBB, you agree to their Terms of Service and Privacy Policy (available at imgbb.com). This plugin is not affiliated with or responsible for ImgBB\'s service.',
-				attr: { style: 'margin: 0.5em 0; font-size: 0.9em;' }
+				cls: 'mtj-warning-tos',
+				text: "By using ImgBB, you agree to their Terms of Service and Privacy Policy (available at imgbb.com). This plugin is not affiliated with or responsible for ImgBB's service.",
 			});
-			warningEl.style.backgroundColor = 'transparent';
-			warningEl.style.border = '1px solid #f59e0b';
-			warningEl.style.borderRadius = '6px';
-			warningEl.style.padding = '1em';
-			warningEl.style.marginBottom = '1em';
 
 			new Setting(containerEl)
 				.setName("ImgBB API Key")

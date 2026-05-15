@@ -66,7 +66,7 @@ export function confluenceBasics(md: MarkdownIt, options?: { translator?: Conflu
 
 	// List handling (same as Jira)
 	md.core.ruler.before('inline', 'confluence_list_fix', function (state) {
-		const stack: any = [];
+		const stack: Array<{ isOrdered: boolean }> = [];
 
 		state.tokens.forEach((token, i) => {
 			if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') {

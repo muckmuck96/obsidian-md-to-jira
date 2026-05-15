@@ -1,3 +1,4 @@
+import { App } from 'obsidian';
 import { ConfluenceTranslator } from './ConfluenceTranslator';
 import MTJPlugin from '../main';
 import { MTJPluginSettings, MTJCallout } from '../settings';
@@ -89,8 +90,8 @@ describe('ConfluenceTranslator - Markdown to Confluence Conversion', () => {
 
 		mockPlugin = {
 			settings: defaultSettings,
-			app: {} as any
-		} as any;
+			app: {} as unknown as App,
+		} as unknown as jest.Mocked<MTJPlugin>;
 
 		translator = new ConfluenceTranslator(mockPlugin);
 	});

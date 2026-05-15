@@ -1,5 +1,7 @@
 import * as MarkdownIt from "markdown-it";
 
+type Token = MarkdownIt.Token;
+
 export interface IssueLinksOptions {
 	projectKeys: string[];
 	baseUrl: string;
@@ -68,7 +70,7 @@ export function issueLinks(md: MarkdownIt, options: IssueLinksOptions): void {
 				continue;
 			}
 
-			const newChildren: any[] = [];
+			const newChildren: Token[] = [];
 
 			for (const token of blockToken.children) {
 				if (token.type !== 'text') {

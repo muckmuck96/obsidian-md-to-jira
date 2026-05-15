@@ -72,7 +72,8 @@ export class ImageHandler {
 				};
 			}
 		} catch (error) {
-			const errorMsg = `Error uploading to ImgBB: ${error.message}`;
+			const message = error instanceof Error ? error.message : String(error);
+			const errorMsg = `Error uploading to ImgBB: ${message}`;
 			new Notice(errorMsg);
 			return {
 				jiraMarkup: this.manualHandling(src, alt).jiraMarkup,

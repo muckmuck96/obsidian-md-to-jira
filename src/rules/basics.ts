@@ -62,7 +62,7 @@ export function basics(md: MarkdownIt, options?: { translator?: Translator }): v
     };
 
     md.core.ruler.before('inline', 'list_fix', function (state) {
-        const stack: any = []; 
+        const stack: Array<{ isOrdered: boolean }> = [];
 
         state.tokens.forEach((token, i) => {
             if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') {

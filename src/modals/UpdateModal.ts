@@ -1,9 +1,9 @@
-import { Modal, App, Notice, requestUrl } from "obsidian";
-import { marked } from "marked";
+import { Modal, App, Component, MarkdownRenderer, requestUrl } from "obsidian";
 
 export class UpdateModal extends Modal {
 	version: string;
 	releaseNotes: string | null = null;
+	private renderComponent: Component = new Component();
 
 	constructor(app: App, version: string) {
 		super(app);
@@ -14,13 +14,11 @@ export class UpdateModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", {
-			text: `Markdown to Jira Converter updated to v${this.version}`,
-		});
+		this.titleEl.setText(`Markdown to Jira Converter updated to v${this.version}`);
 
 		const loadingEl = contentEl.createDiv({
 			text: "Loading release notes...",
-			cls: "update-modal-loading"
+			cls: "update-modal-loading",
 		});
 
 		try {
@@ -28,38 +26,38 @@ export class UpdateModal extends Modal {
 			loadingEl.remove();
 
 			if (this.releaseNotes) {
-				const htmlContent = marked.parse(this.releaseNotes, { async: false }) as string;
-
 				const notesContainer = contentEl.createDiv({
-					cls: "update-modal-content"
+					cls: "update-modal-content",
 				});
-				notesContainer.innerHTML = htmlContent;
-
-				notesContainer.style.maxHeight = "400px";
-				notesContainer.style.overflowY = "auto";
-				notesContainer.style.padding = "1em";
-				notesContainer.style.border = "1px solid var(--background-modifier-border)";
-				notesContainer.style.borderRadius = "4px";
-				notesContainer.style.marginTop = "1em";
+				this.renderComponent.load();
+				await MarkdownRenderer.renderMarkdown(
+					this.releaseNotes,
+					notesContainer,
+					"",
+					this.renderComponent
+				);
 			} else {
-				loadingEl.setText("Could not load release notes. Please visit the GitHub releases page for details.");
+				loadingEl.setText(
+					"Could not load release notes. Please visit the GitHub releases page for details."
+				);
 			}
 		} catch (error) {
-			loadingEl.setText("Error loading release notes. Please check your internet connection or visit the GitHub releases page.");
+			loadingEl.setText(
+				"Error loading release notes. Please check your internet connection or visit the GitHub releases page."
+			);
 			console.error("[UpdateModal] Failed to fetch release notes:", error);
 		}
 
-		const linkContainer = contentEl.createDiv({
-			cls: "update-modal-link",
-		});
-		linkContainer.style.marginTop = "1em";
-		linkContainer.style.textAlign = "center";
-
-		const link = linkContainer.createEl("a", {
+		const linkContainer = contentEl.createDiv({ cls: "update-modal-link" });
+		linkContainer.createEl("a", {
 			text: "View all releases on GitHub",
 			href: "https://github.com/muckmuck96/obsidian-md-to-jira/releases",
 		});
-		link.style.color = "var(--text-accent)";
+	}
+
+	onClose(): void {
+		this.renderComponent.unload();
+		this.contentEl.empty();
 	}
 
 	async fetchReleaseNotes(): Promise<void> {

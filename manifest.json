@@ -2,8 +2,8 @@
 	"id": "obsidian-md-to-jira",
 	"name": "Markdown to Jira Converter",
 	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "This is a markdown to jira markup and backwards converter plugin for Obsidian (https://obsidian.md)",
+	"minAppVersion": "1.2.3",
+	"description": "Convert notes or selections to Jira/Confluence markup and vice versa.",
 	"author": "muckmuck",
 	"authorUrl": "https://github.com/muckmuck96",
 	"isDesktopOnly": false

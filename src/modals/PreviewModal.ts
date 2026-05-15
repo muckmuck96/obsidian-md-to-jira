@@ -1,5 +1,7 @@
 import { App, Modal, ButtonComponent } from 'obsidian';
 
+type Segment = { text: string; cls?: string };
+
 /**
  * Modal for previewing converted markup before copying to clipboard
  */
@@ -25,52 +27,27 @@ export class PreviewModal extends Modal {
 		contentEl.empty();
 
 		const markupName = this.markupType === 'confluence' ? 'Confluence' : 'Jira';
+		this.titleEl.setText(`${markupName} markup preview`);
 
-		contentEl.createEl('h2', { text: `${markupName} Markup Preview` });
-
-		// Create preview container with syntax highlighting
 		const previewContainer = contentEl.createDiv({ cls: 'mtj-preview-container' });
-		previewContainer.style.backgroundColor = 'var(--background-secondary)';
-		previewContainer.style.padding = '16px';
-		previewContainer.style.borderRadius = '6px';
-		previewContainer.style.marginBottom = '16px';
-		previewContainer.style.maxHeight = '400px';
-		previewContainer.style.overflow = 'auto';
-		previewContainer.style.fontFamily = 'var(--font-monospace)';
-		previewContainer.style.fontSize = '13px';
-		previewContainer.style.lineHeight = '1.5';
-		previewContainer.style.whiteSpace = 'pre-wrap';
-		previewContainer.style.wordBreak = 'break-word';
-
-		// Add syntax-highlighted content
 		const codeEl = previewContainer.createEl('code');
 		this.highlightSyntax(codeEl, this.markup);
 
-		// Character count info
-		const infoEl = contentEl.createEl('p', {
+		contentEl.createEl('p', {
 			text: `${this.markup.length} characters`,
-			cls: 'mtj-preview-info'
+			cls: 'mtj-preview-info',
 		});
-		infoEl.style.fontSize = '12px';
-		infoEl.style.color = 'var(--text-muted)';
-		infoEl.style.marginBottom = '16px';
 
-		// Button container
 		const buttonContainer = contentEl.createDiv({ cls: 'mtj-modal-buttons' });
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.justifyContent = 'flex-end';
-		buttonContainer.style.gap = '10px';
 
-		// Cancel button
 		new ButtonComponent(buttonContainer)
 			.setButtonText('Cancel')
 			.onClick(() => {
 				this.close();
 			});
 
-		// Copy to Clipboard button (primary action)
 		new ButtonComponent(buttonContainer)
-			.setButtonText('Copy to Clipboard')
+			.setButtonText('Copy to clipboard')
 			.setCta()
 			.onClick(() => {
 				this.close();
@@ -79,42 +56,96 @@ export class PreviewModal extends Modal {
 	}
 
 	private highlightSyntax(container: HTMLElement, markup: string): void {
-		// Simple syntax highlighting for Jira/Confluence markup
-		let html = this.escapeHtml(markup);
-
-		// Highlight headings
-		html = html.replace(/^(h[1-6]\.)(.*)$/gm, '<span style="color: var(--text-accent);">$1</span><span style="font-weight: bold;">$2</span>');
-
-		// Highlight code blocks
-		html = html.replace(/(\{code[^}]*\})/g, '<span style="color: var(--text-accent);">$1</span>');
-		html = html.replace(/(\{\/code\}|\{code\}$)/gm, '<span style="color: var(--text-accent);">$1</span>');
-
-		// Highlight panels
-		html = html.replace(/(\{panel[^}]*\})/g, '<span style="color: var(--text-accent);">$1</span>');
-		html = html.replace(/(\{panel\})/g, '<span style="color: var(--text-accent);">$1</span>');
-
-		// Highlight quotes
-		html = html.replace(/(\{quote\})/g, '<span style="color: var(--text-accent);">$1</span>');
-
-		// Highlight inline code
-		html = html.replace(/(\{\{)([^}]+)(\}\})/g, '<span style="color: var(--text-accent);">$1</span><span style="background: var(--background-primary-alt); padding: 2px 4px; border-radius: 3px;">$2</span><span style="color: var(--text-accent);">$3</span>');
-
-		// Highlight table delimiters
-		html = html.replace(/(\|\|)/g, '<span style="color: var(--text-accent);">$1</span>');
-
-		// Highlight list markers
-		html = html.replace(/^(\*+|\#+)\s/gm, '<span style="color: var(--text-accent);">$1</span> ');
-
-		// Highlight links
-		html = html.replace(/(\[)([^\]|]+)(\|)([^\]]+)(\])/g, '<span style="color: var(--text-accent);">$1</span><span style="color: var(--text-accent-hover);">$2</span><span style="color: var(--text-accent);">$3</span><span style="text-decoration: underline;">$4</span><span style="color: var(--text-accent);">$5</span>');
-
-		container.innerHTML = html;
+		const lines = markup.split('\n');
+		lines.forEach((line, idx) => {
+			const segments = this.tokenizeLine(line);
+			for (const seg of segments) {
+				if (seg.cls) {
+					container.createSpan({ cls: seg.cls, text: seg.text });
+				} else if (seg.text.length > 0) {
+					container.appendText(seg.text);
+				}
+			}
+			if (idx < lines.length - 1) {
+				container.appendText('\n');
+			}
+		});
 	}
 
-	private escapeHtml(text: string): string {
-		const div = document.createElement('div');
-		div.textContent = text;
-		return div.innerHTML;
+	private tokenizeLine(line: string): Segment[] {
+		const headingMatch = line.match(/^(h[1-6]\.)(.*)$/);
+		if (headingMatch) {
+			return [
+				{ text: headingMatch[1], cls: 'mtj-syntax-accent' },
+				{ text: headingMatch[2], cls: 'mtj-syntax-bold' },
+			];
+		}
+
+		const listMatch = line.match(/^([*#]+)\s(.*)$/);
+		if (listMatch) {
+			const segments: Segment[] = [
+				{ text: listMatch[1] + ' ', cls: 'mtj-syntax-accent' },
+			];
+			this.tokenizeInline(listMatch[2], segments);
+			return segments;
+		}
+
+		const segments: Segment[] = [];
+		this.tokenizeInline(line, segments);
+		return segments;
+	}
+
+	private tokenizeInline(text: string, segments: Segment[]): void {
+		let remaining = text;
+		while (remaining.length > 0) {
+			const blockMacro = remaining.match(
+				/^(\{code[^}]*\}|\{\/code\}|\{panel[^}]*\}|\{panel\}|\{quote\})/
+			);
+			if (blockMacro) {
+				segments.push({ text: blockMacro[0], cls: 'mtj-syntax-accent' });
+				remaining = remaining.slice(blockMacro[0].length);
+				continue;
+			}
+
+			const inlineCode = remaining.match(/^\{\{([^}]+)\}\}/);
+			if (inlineCode) {
+				segments.push({ text: '{{', cls: 'mtj-syntax-accent' });
+				segments.push({ text: inlineCode[1], cls: 'mtj-syntax-inline-code' });
+				segments.push({ text: '}}', cls: 'mtj-syntax-accent' });
+				remaining = remaining.slice(inlineCode[0].length);
+				continue;
+			}
+
+			if (remaining.startsWith('||')) {
+				segments.push({ text: '||', cls: 'mtj-syntax-accent' });
+				remaining = remaining.slice(2);
+				continue;
+			}
+
+			const link = remaining.match(/^\[([^\]|]+)(\|)([^\]]+)\]/);
+			if (link) {
+				segments.push({ text: '[', cls: 'mtj-syntax-accent' });
+				segments.push({ text: link[1], cls: 'mtj-syntax-link-text' });
+				segments.push({ text: link[2], cls: 'mtj-syntax-accent' });
+				segments.push({ text: link[3], cls: 'mtj-syntax-link-url' });
+				segments.push({ text: ']', cls: 'mtj-syntax-accent' });
+				remaining = remaining.slice(link[0].length);
+				continue;
+			}
+
+			const nextSpecial = remaining.search(/[{[|]/);
+			if (nextSpecial === -1) {
+				segments.push({ text: remaining });
+				break;
+			}
+			if (nextSpecial > 0) {
+				segments.push({ text: remaining.slice(0, nextSpecial) });
+				remaining = remaining.slice(nextSpecial);
+			} else {
+				segments.push({ text: remaining[0] });
+				remaining = remaining.slice(1);
+			}
+		}
 	}
 
 	onClose() {

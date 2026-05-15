@@ -106,6 +106,9 @@ export default class MTJPlugin extends Plugin {
 		// Note: Must handle synchronously to properly preventDefault
 		this.registerEvent(
 			this.app.workspace.on('editor-paste', (evt: ClipboardEvent, editor: Editor) => {
+				if (evt.defaultPrevented) {
+					return;
+				}
 				if (!this.settings.autoDetectJiraPaste) {
 					return;
 				}
@@ -175,24 +178,26 @@ export default class MTJPlugin extends Plugin {
 	onunload() {}
 
 	async loadSettings() {
-		const loadedData = await this.loadData();
+		const loadedData = (await this.loadData()) as Record<string, unknown> | null;
 
 		let needsMigration = false;
 
 		if (loadedData) {
-			const oldImageUpload = (loadedData as any).imageUpload;
+			const hasOwn = (obj: Record<string, unknown>, key: string): boolean =>
+				Object.prototype.hasOwnProperty.call(obj, key);
+
+			const oldImageUpload = loadedData.imageUpload as Record<string, unknown> | undefined;
 
 			if (oldImageUpload && !oldImageUpload.method && (
-				oldImageUpload.hasOwnProperty('enabled') ||
-				oldImageUpload.hasOwnProperty('host') ||
-				oldImageUpload.hasOwnProperty('username')
+				hasOwn(oldImageUpload, 'enabled') ||
+				hasOwn(oldImageUpload, 'host') ||
+				hasOwn(oldImageUpload, 'username')
 			)) {
 				console.log('[MTJPlugin] Detected old settings format, migrating...');
 				needsMigration = true;
 
-				// Migrate old imageUpload settings to new format
 				loadedData.imageUpload = {
-					method: 'manual', // Default to manual for safety
+					method: 'manual',
 					imgbb: {
 						apiKey: '',
 					}
@@ -201,13 +206,12 @@ export default class MTJPlugin extends Plugin {
 				console.log('[MTJPlugin] Migrated imageUpload settings to new format');
 			}
 
-			// Also handle case where jiraApi exists (recent version before removal)
 			if (oldImageUpload && oldImageUpload.jiraApi) {
 				console.log('[MTJPlugin] Removing deprecated jiraApi configuration');
 				needsMigration = true;
 
 				if (oldImageUpload.method === 'jira-api') {
-					loadedData.imageUpload.method = 'manual';
+					(loadedData.imageUpload as Record<string, unknown>).method = 'manual';
 					console.log('[MTJPlugin] Changed upload method from jira-api to manual');
 				}
 
@@ -222,15 +226,16 @@ export default class MTJPlugin extends Plugin {
 				delete oldImageUpload.password;
 			}
 
-			if ((loadedData as any).imageEnableUploadToHost !== undefined) {
-				delete (loadedData as any).imageEnableUploadToHost;
+			if (loadedData.imageEnableUploadToHost !== undefined) {
+				delete loadedData.imageEnableUploadToHost;
 				needsMigration = true;
 			}
 
-			// Migrate taskListVisualization if it's the old empty format
-			if (loadedData.taskListVisualization &&
-				loadedData.taskListVisualization.enabled === false &&
-				Object.keys(loadedData.taskListVisualization.mapping || {}).length === 0) {
+			const tlv = loadedData.taskListVisualization as
+				{ enabled?: boolean; mapping?: Record<string, string> } | undefined;
+			if (tlv &&
+				tlv.enabled === false &&
+				Object.keys(tlv.mapping || {}).length === 0) {
 				console.log('[MTJPlugin] Migrating task list visualization to new defaults');
 				loadedData.taskListVisualization = {
 					enabled: true,
@@ -246,15 +251,17 @@ export default class MTJPlugin extends Plugin {
 				needsMigration = true;
 			}
 
-			// Remove deprecated useLegacyConverter setting
-			if ((loadedData as any).useLegacyConverter !== undefined) {
-				delete (loadedData as any).useLegacyConverter;
+			if (loadedData.useLegacyConverter !== undefined) {
+				delete loadedData.useLegacyConverter;
 				needsMigration = true;
 				console.log('[MTJPlugin] Removed deprecated useLegacyConverter setting');
 			}
 		}
 
-		this.settings = this.deepMerge(DEFAULT_SETTINGS, loadedData || {});
+		this.settings = this.deepMerge(
+			DEFAULT_SETTINGS as unknown as Record<string, unknown>,
+			(loadedData || {}) as Record<string, unknown>,
+		) as unknown as MTJPluginSettings;
 
 		if (needsMigration) {
 			await this.saveSettings();
@@ -262,14 +269,22 @@ export default class MTJPlugin extends Plugin {
 		}
 	}
 
-	deepMerge(target: any, source: any): any {
-		const result = { ...target };
+	deepMerge(
+		target: Record<string, unknown>,
+		source: Record<string, unknown>,
+	): Record<string, unknown> {
+		const result: Record<string, unknown> = { ...target };
 
 		for (const key in source) {
-			if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-				result[key] = this.deepMerge(target[key] || {}, source[key]);
+			const sourceValue = source[key];
+			const targetValue = target[key];
+			if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+				result[key] = this.deepMerge(
+					(targetValue as Record<string, unknown>) || {},
+					sourceValue as Record<string, unknown>,
+				);
 			} else {
-				result[key] = source[key];
+				result[key] = sourceValue;
 			}
 		}
 

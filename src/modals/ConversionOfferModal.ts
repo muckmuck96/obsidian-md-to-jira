@@ -25,47 +25,28 @@ export class ConversionOfferModal extends Modal {
 		contentEl.empty();
 
 		const markupName = this.markupType === 'confluence' ? 'Confluence' : 'Jira';
-
-		contentEl.createEl('h2', { text: `${markupName} Markup Detected` });
+		this.titleEl.setText(`${markupName} markup detected`);
 
 		contentEl.createEl('p', {
-			text: `The clipboard content appears to be ${markupName} markup. Would you like to convert it to Markdown?`
+			text: `The clipboard content appears to be ${markupName} markup. Would you like to convert it to Markdown?`,
 		});
 
-		// Preview of the content (first 200 chars)
 		const previewText = this.clipboardContent.length > 200
 			? this.clipboardContent.substring(0, 200) + '...'
 			: this.clipboardContent;
 
 		const previewContainer = contentEl.createDiv({ cls: 'mtj-conversion-preview' });
-		previewContainer.style.backgroundColor = 'var(--background-secondary)';
-		previewContainer.style.padding = '10px';
-		previewContainer.style.borderRadius = '6px';
-		previewContainer.style.marginBottom = '16px';
-		previewContainer.style.maxHeight = '150px';
-		previewContainer.style.overflow = 'auto';
-		previewContainer.style.fontFamily = 'monospace';
-		previewContainer.style.fontSize = '12px';
-		previewContainer.style.whiteSpace = 'pre-wrap';
-		previewContainer.style.wordBreak = 'break-all';
-
 		previewContainer.createEl('code', { text: previewText });
 
-		// Button container
 		const buttonContainer = contentEl.createDiv({ cls: 'mtj-modal-buttons' });
-		buttonContainer.style.display = 'flex';
-		buttonContainer.style.justifyContent = 'flex-end';
-		buttonContainer.style.gap = '10px';
 
-		// Keep Original button
 		new ButtonComponent(buttonContainer)
-			.setButtonText('Keep Original')
+			.setButtonText('Keep original')
 			.onClick(() => {
 				this.close();
 				this.onDecision(false);
 			});
 
-		// Convert to Markdown button (primary action)
 		new ButtonComponent(buttonContainer)
 			.setButtonText('Convert to Markdown')
 			.setCta()

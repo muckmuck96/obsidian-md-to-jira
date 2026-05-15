@@ -1,3 +1,4 @@
+import { App } from 'obsidian';
 import { Translator } from './Translator';
 import MTJPlugin from '../main';
 import { MTJPluginSettings, MTJCallout } from '../settings';
@@ -89,8 +90,8 @@ describe('Translator - Markdown to Jira Conversion', () => {
 
         mockPlugin = {
             settings: defaultSettings,
-            app: {} as any
-        } as any;
+            app: {} as unknown as App,
+        } as unknown as jest.Mocked<MTJPlugin>;
 
         translator = new Translator(mockPlugin);
     });

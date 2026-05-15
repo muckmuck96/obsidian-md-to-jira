@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:community.obsidian.md)",
+      "WebFetch(domain:www.moritzjung.dev)",
+      "WebFetch(domain:obsidian-plugin-stats.ganesshkumar.com)",
+      "WebFetch(domain:www.obsidianstats.com)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://community.obsidian.md/plugins/obsidian-md-to-jira\" -UserAgent \"Mozilla/5.0\" -UseBasicParsing; $r.Content | Out-File page.html -Encoding utf8; \\(Get-Content page.html | Select-String -Pattern \"risk|warning|scorecard|practice|health|review\" -CaseSensitive:$false | Select-Object -First 30\\))",
+      "PowerShell($c = Get-Content page.html -Raw; $idx = $c.IndexOf\\('scorecard'\\); if \\($idx -gt -1\\) { $c.Substring\\($idx, [Math]::Min\\(15000, $c.Length - $idx\\)\\) } else { \"no scorecard found\" })",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://community.obsidian.md/plugins/obsidian-md-to-jira/scorecard\" -UserAgent \"Mozilla/5.0\" -UseBasicParsing; $r.Content | Out-File scorecard.html -Encoding utf8; \\(Get-Item scorecard.html\\).Length)"
+    ]
+  }
+}

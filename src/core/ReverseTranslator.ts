@@ -379,9 +379,10 @@ export class ReverseTranslator {
 			case 'heading':
 				return '#'.repeat(token.meta?.level || 1) + ' ' + token.content + '\n\n';
 
-			case 'code_block':
+			case 'code_block': {
 				const lang = token.meta?.lang || '';
 				return '```' + lang + '\n' + token.content + '\n```\n\n';
+			}
 
 			case 'noformat':
 				return '```\n' + token.content + '\n```\n\n';
@@ -398,13 +399,13 @@ export class ReverseTranslator {
 			case 'table':
 				return this.convertTable(token.content) + '\n';
 
-			case 'list_item':
+			case 'list_item': {
 				const indent = '  '.repeat((token.meta?.level || 1) - 1);
 				const marker = token.meta?.ordered ? '1.' : '-';
 				return indent + marker + ' ' + token.content + '\n';
+			}
 
-			case 'panel':
-				// Convert panel to callout
+			case 'panel': {
 				const panelTitle = token.meta?.title || 'NOTE';
 				const panelContent = token.content
 					.replace(/\{color:[^}]+\}/g, '')
@@ -412,9 +413,9 @@ export class ReverseTranslator {
 					.trim();
 				return `> [!NOTE] ${panelTitle}\n` +
 					panelContent.split('\n').map(line => '> ' + line).join('\n') + '\n\n';
+			}
 
-			case 'confluence_macro':
-				// Convert Confluence macros to appropriate callouts
+			case 'confluence_macro': {
 				const macroType = token.meta?.macroType || 'info';
 				const macroTitle = token.meta?.title || '';
 				const macroContent = token.content
@@ -422,7 +423,6 @@ export class ReverseTranslator {
 					.replace(/\{color\}/g, '')
 					.trim();
 
-				// Map Confluence macro types to Obsidian callout types
 				const calloutTypeMap: Record<string, string> = {
 					'info': 'INFO',
 					'note': 'NOTE',
@@ -434,13 +434,13 @@ export class ReverseTranslator {
 
 				return `> [!${calloutType}] ${calloutTitle}\n` +
 					macroContent.split('\n').map(line => '> ' + line).join('\n') + '\n\n';
+			}
 
-			case 'expand':
-				// Convert expand to a details/summary block or callout
+			case 'expand': {
 				const expandTitle = token.meta?.title || 'Details';
 				const expandContent = token.content.trim();
-				// Use HTML details/summary for collapsible content
 				return `<details>\n<summary>${expandTitle}</summary>\n\n${expandContent}\n\n</details>\n\n`;
+			}
 
 			case 'paragraph':
 				return token.content + '\n\n';
