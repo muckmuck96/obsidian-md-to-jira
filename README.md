@@ -50,6 +50,7 @@ The legacy converter is based on [this project](https://github.com/FokkeZB/J2M)
 # 1.0.1: Bugfixes & Cleanups
 - fixed some bugs
 - did some code cleanups
+- extracted style.css from code
 
 ## 1.0.0: New Features on new converter
 - added markup preview modal
