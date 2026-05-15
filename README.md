@@ -42,9 +42,6 @@ There are two ways to convert your markdown into jira markup. In both ways, the 
 
 Vice versa, you can convert jira markup into markdown using the command: `Jira markup (clipboard) to markdown note`
 
-## Credits
-The legacy converter is based on [this project](https://github.com/FokkeZB/J2M)
-
 ## Releases
 
 # 1.0.1: Bugfixes & Cleanups
