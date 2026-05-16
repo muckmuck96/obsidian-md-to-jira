@@ -44,7 +44,7 @@ Vice versa, you can convert jira markup into markdown using the command: `Jira m
 
 ## Releases
 
-# 1.0.1: Bugfixes & Cleanups
+## 1.0.1: Bugfixes & Cleanups
 - fixed some bugs
 - did some code cleanups
 - extracted style.css from code
