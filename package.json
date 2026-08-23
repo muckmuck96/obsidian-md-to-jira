@@ -27,7 +27,7 @@
 		"obsidian": "latest",
 		"ts-jest": "^29.4.5",
 		"tslib": "^2.4.0",
-		"typescript": "4.7.4"
+		"typescript": "5.9.3"
 	},
 	"dependencies": {
 		"js-yaml": "^4.3.1",
