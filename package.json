@@ -32,6 +32,6 @@
 	"dependencies": {
 		"js-yaml": "^5.3.0",
 		"markdown-it": "^14.1.0",
-		"marked": "^12.0.2"
+		"marked": "^18.0.10"
 	}
 }
